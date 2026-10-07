@@ -3,13 +3,14 @@ import { computed, inject, type ComputedRef } from 'vue';
 import { formatHumanReadableDuration, getDayJsInstance } from '../utils/time';
 import type { Organization } from '@/packages/api/src';
 import { Coffee } from '@lucide/vue';
-import { ExclamationTriangleIcon } from '@heroicons/vue/20/solid';
+import { ExclamationTriangleIcon, TagIcon } from '@heroicons/vue/20/solid';
 
 const props = defineProps<{
     title: string;
     projectName?: string | null;
     taskName?: string | null;
     clientName?: string | null;
+    tagLabel?: string | null;
     durationSeconds?: number;
     start?: string | Date | null;
     end?: string | Date | null;
@@ -62,6 +63,13 @@ const formattedDuration = computed(() =>
         </div>
         <div v-if="clientName" class="opacity-85">
             {{ clientName }}
+        </div>
+        <div
+            v-if="tagLabel"
+            class="flex items-center gap-0.5 opacity-85"
+            data-testid="calendar_event_tags">
+            <TagIcon class="w-2.5 h-2.5 shrink-0" />
+            <span class="truncate">{{ tagLabel }}</span>
         </div>
         <div class="opacity-90" data-duration>
             {{ formattedDuration }}

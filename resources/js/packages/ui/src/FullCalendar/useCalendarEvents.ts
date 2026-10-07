@@ -1,8 +1,9 @@
 import { computed, ref, type Ref, type ComputedRef } from 'vue';
 import chroma from 'chroma-js';
 import type { Dayjs } from 'dayjs';
-import type { TimeEntry, Project, Client, Task } from '@/packages/api/src';
+import type { TimeEntry, Project, Client, Task, Tag } from '@/packages/api/src';
 import { getBreakPlacementHint } from '../utils/breakPlacement';
+import { tagLabel } from '../utils/tags';
 import { getDayJsInstance, getLocalizedDayJs } from '../utils/time';
 import type { CalendarSettings } from './calendarSettings';
 import type { CalendarEvent, DayEvent } from './calendarTypes';
@@ -171,6 +172,7 @@ export function useCalendarEvents(params: {
     projects: () => Project[];
     clients: () => Client[];
     tasks: () => Task[];
+    tags?: () => Tag[];
     calendarSettings: Ref<CalendarSettings>;
     viewDays: ComputedRef<Dayjs[]>;
     currentTime: Ref<Dayjs>;
@@ -189,6 +191,7 @@ export function useCalendarEvents(params: {
             const project = params.projects().find((p) => p.id === timeEntry.project_id);
             const client = params.clients().find((c) => c.id === project?.client_id);
             const task = params.tasks().find((t) => t.id === timeEntry.task_id);
+            const eventTagLabel = tagLabel(timeEntry.tags ?? [], params.tags?.() ?? []);
 
             const effectiveEnd = isRunning
                 ? params.currentTime.value
@@ -227,6 +230,7 @@ export function useCalendarEvents(params: {
                 project,
                 client,
                 task,
+                tagLabel: eventTagLabel,
                 isRunning,
                 isBreak,
                 isMisplacedBreak,

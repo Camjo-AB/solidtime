@@ -12,6 +12,8 @@ export interface CalendarEvent {
     project?: Project;
     client?: Client;
     task?: Task;
+    /** Tag label for the event, e.g. "Internmöte" or "Internmöte + 2 more"; empty without tags. */
+    tagLabel: string;
     isRunning: boolean;
     isBreak: boolean;
     isMisplacedBreak: boolean;

@@ -122,6 +122,7 @@ const emit = defineEmits<{
                         :project-name="dayEvent.event.project?.name"
                         :task-name="dayEvent.event.task?.name"
                         :client-name="dayEvent.event.client?.name"
+                        :tag-label="dayEvent.event.tagLabel"
                         :is-break="dayEvent.event.isBreak"
                         :is-misplaced-break="dayEvent.event.isMisplacedBreak"
                         :duration-seconds="getEventDurationSeconds(dayEvent, dayStr)" />

@@ -168,6 +168,7 @@ const {
     projects: () => props.projects,
     clients: () => props.clients,
     tasks: () => props.tasks,
+    tags: () => props.tags,
     calendarSettings,
     viewDays,
     currentTime,
