@@ -815,6 +815,24 @@ test('test that project and tag picked before pressing play are saved on the new
     expect(body.tags).toEqual([tag.id]);
     await assertThatTimerHasStarted(page);
 
-    await Promise.all([stoppedTimeEntryResponse(page), startOrStopTimerWithButton(page)]);
+    // The stopped entry keeps the picked project and tag
+    await Promise.all([
+        page.waitForResponse(async (response) => {
+            if (
+                response.status() !== 200 ||
+                !response.url().includes('/time-entries/') ||
+                response.request().method() !== 'PUT'
+            ) {
+                return false;
+            }
+            const data = (await response.json()).data;
+            return (
+                data.end !== null &&
+                data.project_id === project.id &&
+                JSON.stringify(data.tags) === JSON.stringify([tag.id])
+            );
+        }),
+        startOrStopTimerWithButton(page),
+    ]);
     await assertThatTimerIsStopped(page);
 });
