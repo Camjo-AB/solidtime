@@ -135,6 +135,6 @@ export type UpdateUserBody = ZodiosBodyByAlias<SolidTimeApi, 'updateUser'>;
 export type DeleteUserBody = ZodiosBodyByAlias<SolidTimeApi, 'deleteUser'>;
 export type DeleteOrganizationBody = ZodiosBodyByAlias<SolidTimeApi, 'deleteOrganization'>;
 
-const api = createApiClient('/api', { validate: 'none' });
+const api: ReturnType<typeof createApiClient> = createApiClient('/api', { validate: 'none' });
 
 export { createApiClient, api };
