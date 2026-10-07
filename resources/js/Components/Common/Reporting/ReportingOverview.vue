@@ -47,7 +47,7 @@ import { useSessionStorage, useStorage } from '@vueuse/core';
 import { useNotificationsStore } from '@/utils/notification';
 import type { ExportFormat } from '@/types/reporting';
 import { getRandomColorWithSeed } from '@/packages/ui/src/utils/color';
-import { useProjectsQuery } from '@/utils/useProjectsQuery';
+import { useReportingEntities } from '@/utils/useReportingEntities';
 import { useAggregatedTimeEntriesQuery } from '@/utils/useAggregatedTimeEntriesQuery';
 import type { TagMatchType } from '@/types/reporting';
 
@@ -209,7 +209,7 @@ async function downloadExport(format: ExportFormat) {
     }
 }
 
-const { projects } = useProjectsQuery();
+const { projects } = useReportingEntities();
 const showExportModal = ref(false);
 const exportUrl = ref<string | null>(null);
 const showCreateReportModal = ref(false);

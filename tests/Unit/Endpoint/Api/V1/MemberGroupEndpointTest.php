@@ -7,9 +7,12 @@ namespace Tests\Unit\Endpoint\Api\V1;
 use App\Enums\Role;
 use App\Http\Controllers\Api\V1\MemberGroupController;
 use App\Http\Controllers\Api\V1\TimeEntryController;
+use App\Models\Client;
 use App\Models\Member;
 use App\Models\MemberGroup;
 use App\Models\Organization;
+use App\Models\Project;
+use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Models\User;
 use App\Service\MemberGroupService;
@@ -198,6 +201,40 @@ class MemberGroupEndpointTest extends ApiEndpointTestAbstract
         Passport::actingAs($data->user);
 
         $response = $this->getJson(route('api.v1.member-groups.team-members', [$data->organization->getKey()]));
+
+        $response->assertForbidden();
+    }
+
+    public function test_team_entities_returns_projects_tasks_and_clients_of_teammates_entries_only(): void
+    {
+        $data = $this->createUserWithRole(Role::Employee);
+        $teammate = $this->createMember($data->organization);
+        $outsider = $this->createMember($data->organization);
+        $this->createGroup($data->organization, [$data->member, $teammate]);
+        $client = Client::factory()->forOrganization($data->organization)->create();
+        $teamProject = Project::factory()->forOrganization($data->organization)->forClient($client)->create(['is_public' => false, 'billable_rate' => 5000]);
+        $teamTask = Task::factory()->forOrganization($data->organization)->forProject($teamProject)->create();
+        $outsiderProject = Project::factory()->forOrganization($data->organization)->create(['is_public' => false]);
+        $start = Carbon::now()->subDays(2);
+        TimeEntry::factory()->forOrganization($data->organization)->forMember($teammate)->forProject($teamProject)->forTask($teamTask)->startWithDuration($start, 100)->create();
+        TimeEntry::factory()->forOrganization($data->organization)->forMember($outsider)->forProject($outsiderProject)->startWithDuration($start, 100)->create();
+        Passport::actingAs($data->user);
+
+        $response = $this->getJson(route('api.v1.member-groups.team-entities', [$data->organization->getKey()]));
+
+        $response->assertSuccessful();
+        $this->assertSame([$teamProject->getKey()], collect($response->json('data.projects'))->pluck('id')->all());
+        $this->assertSame([$teamTask->getKey()], collect($response->json('data.tasks'))->pluck('id')->all());
+        $this->assertSame([$client->getKey()], collect($response->json('data.clients'))->pluck('id')->all());
+        $response->assertJsonPath('data.projects.0.billable_rate', null);
+    }
+
+    public function test_team_entities_fails_for_employee_without_group(): void
+    {
+        $data = $this->createUserWithRole(Role::Employee);
+        Passport::actingAs($data->user);
+
+        $response = $this->getJson(route('api.v1.member-groups.team-entities', [$data->organization->getKey()]));
 
         $response->assertForbidden();
     }

@@ -160,6 +160,7 @@ Route::prefix('v1')->name('v1.')->group(static function (): void {
         Route::name('member-groups.')->prefix('/organizations/{organization}')->group(static function (): void {
             Route::get('/member-groups', [MemberGroupController::class, 'index'])->name('index');
             Route::get('/member-groups/team-members', [MemberGroupController::class, 'teamMembers'])->name('team-members');
+            Route::get('/member-groups/team-entities', [MemberGroupController::class, 'teamEntities'])->name('team-entities');
             Route::post('/member-groups', [MemberGroupController::class, 'store'])->name('store')->middleware('check-organization-blocked');
             Route::put('/member-groups/{memberGroup}', [MemberGroupController::class, 'update'])->name('update')->middleware('check-organization-blocked');
             Route::delete('/member-groups/{memberGroup}', [MemberGroupController::class, 'destroy'])->name('destroy');

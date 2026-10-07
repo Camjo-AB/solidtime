@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import MultiselectDropdown from '@/packages/ui/src/Input/MultiselectDropdown.vue';
 import type { Task } from '@/packages/api/src';
-import { useTasksQuery } from '@/utils/useTasksQuery';
+import { useReportingEntities } from '@/utils/useReportingEntities';
 
-const { tasks } = useTasksQuery();
+const { tasks } = useReportingEntities();
 
 function getKeyFromItem(item: Task) {
     return item.id;

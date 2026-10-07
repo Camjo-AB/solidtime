@@ -7,15 +7,23 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Requests\V1\MemberGroup\MemberGroupIndexRequest;
 use App\Http\Requests\V1\MemberGroup\MemberGroupStoreRequest;
 use App\Http\Requests\V1\MemberGroup\MemberGroupUpdateRequest;
+use App\Http\Resources\V1\Client\ClientResource;
 use App\Http\Resources\V1\MemberGroup\MemberGroupCollection;
 use App\Http\Resources\V1\MemberGroup\MemberGroupResource;
 use App\Http\Resources\V1\MemberGroup\TeamMemberResource;
+use App\Http\Resources\V1\Project\ProjectResource;
+use App\Http\Resources\V1\Task\TaskResource;
+use App\Models\Client;
 use App\Models\Member;
 use App\Models\MemberGroup;
 use App\Models\Organization;
+use App\Models\Project;
+use App\Models\Task;
+use App\Models\TimeEntry;
 use App\Service\MemberGroupService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 /**
@@ -136,5 +144,54 @@ class MemberGroupController extends Controller
             ->values();
 
         return TeamMemberResource::collection($members);
+    }
+
+    /**
+     * Get the projects, tasks and clients of my teams' time entries
+     *
+     * Employees can only list the projects they are members of. This returns the projects, tasks and
+     * clients that appear in the time entries of their teammates, so the reporting can show their
+     * names. It does not allow tracking time on them.
+     *
+     * @return array{data: array{projects: array<mixed>, tasks: array<mixed>, clients: array<mixed>}}
+     *
+     * @operationId getTeamEntities
+     *
+     * @throws AuthorizationException
+     */
+    public function teamEntities(Organization $organization, Request $request, MemberGroupService $memberGroupService): array
+    {
+        $this->checkPermission($organization, 'time-entries:view:team');
+
+        $memberIds = $memberGroupService->visibleMemberIds($this->member($organization));
+        $timeEntries = TimeEntry::query()
+            ->whereBelongsTo($organization, 'organization')
+            ->whereIn('member_id', $memberIds);
+        $projectIds = (clone $timeEntries)->whereNotNull('project_id')->distinct()->pluck('project_id');
+        $taskIds = (clone $timeEntries)->whereNotNull('task_id')->distinct()->pluck('task_id');
+
+        $projects = Project::query()
+            ->whereBelongsTo($organization, 'organization')
+            ->whereIn('id', $projectIds)
+            ->get();
+        $tasks = Task::query()
+            ->whereBelongsTo($organization, 'organization')
+            ->whereIn('id', $taskIds)
+            ->get();
+        $clients = Client::query()
+            ->whereBelongsTo($organization, 'organization')
+            ->whereIn('id', $projects->pluck('client_id')->filter()->unique()->values())
+            ->get();
+
+        // Only employees have this permission, so billable rates follow the employee setting.
+        $showBillableRate = $organization->employees_can_see_billable_rates;
+
+        return [
+            'data' => [
+                'projects' => $projects->map(fn (Project $project): array => (new ProjectResource($project, $showBillableRate))->toArray($request))->values()->all(),
+                'tasks' => $tasks->map(fn (Task $task): array => (new TaskResource($task))->toArray($request))->values()->all(),
+                'clients' => $clients->map(fn (Client $client): array => (new ClientResource($client))->toArray($request))->values()->all(),
+            ],
+        ];
     }
 }

@@ -33,13 +33,11 @@ import { useTagsStore } from '@/utils/useTags';
 import { useSessionStorage } from '@vueuse/core';
 import TimeEntryRow from '@/packages/ui/src/TimeEntry/TimeEntryRow.vue';
 import { useCurrentTimeEntryStore } from '@/utils/useCurrentTimeEntry';
-import { useProjectsQuery } from '@/utils/useProjectsQuery';
 import { useProjectsStore } from '@/utils/useProjects';
-import { useTasksQuery } from '@/utils/useTasksQuery';
-import { useClientsQuery } from '@/utils/useClientsQuery';
 import { useClientsStore } from '@/utils/useClients';
 import { getOrganizationCurrencyString } from '@/utils/money';
 import { useReportingMembers } from '@/utils/useReportingMembers';
+import { useReportingEntities } from '@/utils/useReportingEntities';
 import { useQueryClient } from '@tanstack/vue-query';
 import { getCurrentOrganizationId, getCurrentMembershipId } from '@/utils/useUser';
 import ReportingTabNavbar from '@/Components/Common/Reporting/ReportingTabNavbar.vue';
@@ -160,9 +158,7 @@ onMounted(async () => {
     await updateFilteredTimeEntries();
 });
 
-const { projects } = useProjectsQuery();
-const { tasks } = useTasksQuery();
-const { clients } = useClientsQuery();
+const { projects, tasks, clients } = useReportingEntities();
 
 const selectedTimeEntries = ref<TimeEntry[]>([]);
 

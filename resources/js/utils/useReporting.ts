@@ -1,10 +1,8 @@
 import { defineStore } from 'pinia';
 import { type Component } from 'vue';
 import { getCurrentRole, getCurrentUser } from '@/utils/useUser';
-import { useProjectsQuery } from '@/utils/useProjectsQuery';
 import { useReportingMembers } from '@/utils/useReportingMembers';
-import { useTasksQuery } from '@/utils/useTasksQuery';
-import { useClientsQuery } from '@/utils/useClientsQuery';
+import { useReportingEntities } from '@/utils/useReportingEntities';
 import { useTagsQuery } from '@/utils/useTagsQuery';
 import { CheckCircleIcon, UserCircleIcon, UserGroupIcon } from '@heroicons/vue/20/solid';
 import {
@@ -38,10 +36,8 @@ export type GroupingOption =
 
 export const useReportingStore = defineStore('reporting', () => {
     // Cache query composables to avoid creating new subscriptions on every call
-    const { projects } = useProjectsQuery();
+    const { projects, tasks, clients } = useReportingEntities();
     const { members } = useReportingMembers();
-    const { tasks } = useTasksQuery();
-    const { clients } = useClientsQuery();
     const { tags } = useTagsQuery();
 
     const emptyPlaceholder = {

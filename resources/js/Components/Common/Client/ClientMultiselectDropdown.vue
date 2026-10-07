@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import MultiselectDropdown from '@/packages/ui/src/Input/MultiselectDropdown.vue';
 import type { Client } from '@/packages/api/src';
-import { useClientsQuery } from '@/utils/useClientsQuery';
+import { useReportingEntities } from '@/utils/useReportingEntities';
 
-const { clients } = useClientsQuery();
+const { clients } = useReportingEntities();
 
 function getKeyFromItem(item: Client) {
     return item.id;

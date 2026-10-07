@@ -73,6 +73,7 @@ export type MemberGroup = MemberGroupIndexResponse['data'][0];
 export type CreateMemberGroupBody = ZodiosBodyByAlias<SolidTimeApi, 'createMemberGroup'>;
 export type UpdateMemberGroupBody = ZodiosBodyByAlias<SolidTimeApi, 'updateMemberGroup'>;
 export type TeamMember = ZodiosResponseByAlias<SolidTimeApi, 'getTeamMembers'>['data'][0];
+export type TeamEntities = ZodiosResponseByAlias<SolidTimeApi, 'getTeamEntities'>['data'];
 export type UpdateTagBody = ZodiosBodyByAlias<SolidTimeApi, 'updateTag'>;
 
 export type ImportType = ZodiosResponseByAlias<SolidTimeApi, 'getImporters'>['data'][0];
