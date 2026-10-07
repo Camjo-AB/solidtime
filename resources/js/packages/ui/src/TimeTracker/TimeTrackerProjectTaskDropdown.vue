@@ -67,9 +67,12 @@ const props = withDefaults(
         variant?: 'input' | 'ghost' | 'outline';
         align?: 'center' | 'end' | 'start';
         size?: 'default' | 'xs' | 'sm' | 'lg' | 'icon';
+        /** Accessible name for the trigger, when the visible project name is not specific enough. */
+        triggerLabel?: string;
     }>(),
     {
         emptyPlaceholder: 'No Project',
+        triggerLabel: undefined,
         noProjectValue: NO_PROJECT_ID,
         variant: 'ghost',
         align: 'center',
@@ -567,6 +570,7 @@ const showCreateProject = ref(false);
                 <Button
                     :variant="props.variant"
                     :size="props.size"
+                    :aria-label="props.triggerLabel"
                     :class="twMerge('w-full justify-start overflow-hidden', props.class)">
                     <div
                         class="w-2.5 h-2.5 rounded-full shrink-0"

@@ -27,6 +27,10 @@ const props = defineProps<{
     showLabel?: boolean;
     /** Extra classes for the labelled trigger, e.g. to fit a compact host. */
     triggerClass?: string;
+    /** Accessible name for the labelled trigger. */
+    triggerLabel?: string;
+    /** Test id of the trigger; a second tag field on the page needs its own. */
+    testId?: string;
 }>();
 
 const open = defineModel<boolean>('open', { default: false });
@@ -46,7 +50,8 @@ const allTagNames = computed(() => selectedTagNames(model.value, props.tags).joi
         <template #trigger>
             <button
                 v-if="showLabel"
-                data-testid="tag_dropdown"
+                :data-testid="testId ?? 'tag_dropdown'"
+                :aria-label="triggerLabel"
                 :title="allTagNames || undefined"
                 :class="
                     twMerge(
