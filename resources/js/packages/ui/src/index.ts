@@ -34,6 +34,8 @@ import LoadingSpinner from './LoadingSpinner.vue';
 import Modal from './Modal.vue';
 import Pagination from './Pagination.vue';
 import ProjectBadge from './Project/ProjectBadge.vue';
+import TimeTrackerProjectTaskDropdown from './TimeTracker/TimeTrackerProjectTaskDropdown.vue';
+import TimeTrackerTagDropdown from './TimeTracker/TimeTrackerTagDropdown.vue';
 import TimeEntryCreateModal from './TimeEntry/TimeEntryCreateModal.vue';
 import TimeEntryEditModal from './TimeEntry/TimeEntryEditModal.vue';
 import TimeEntryGroupedTable from './TimeEntry/TimeEntryGroupedTable.vue';
@@ -268,6 +270,8 @@ export {
     PrimaryButton,
     Progress,
     ProjectBadge,
+    TimeTrackerProjectTaskDropdown,
+    TimeTrackerTagDropdown,
     random,
     RangeCalendar,
     SecondaryButton,
