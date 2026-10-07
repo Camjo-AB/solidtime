@@ -30,6 +30,8 @@ jobs:
       - name: "Get version"
         id: release-version
         run: |
+          # The fork has no upstream release tags; fetch them so describe finds the base version.
+          git fetch --quiet --tags https://github.com/solidtime-io/solidtime.git
           echo "app_version=$(git describe --tags --match 'v*' | cut -c 2-)" >> "$GITHUB_OUTPUT"
           echo "build=$(git rev-parse --short=8 HEAD)" >> "$GITHUB_OUTPUT"
 
