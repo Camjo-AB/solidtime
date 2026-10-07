@@ -941,3 +941,37 @@ test.describe('Employee Sidebar Navigation', () => {
         ).not.toBeVisible();
     });
 });
+
+test('test that a team can be created and deleted on the members page', async ({ page }) => {
+    const teamName = 'E2E Team ' + Math.floor(Math.random() * 100000);
+    await goToMembersPage(page);
+    await page.getByRole('tab', { name: 'Teams' }).click();
+
+    await page.getByTestId('create_member_group').click();
+    await page.getByTestId('member_group_name').fill(teamName);
+    await Promise.all([
+        page.waitForResponse(
+            (response) =>
+                response.url().includes('/member-groups') &&
+                response.request().method() === 'POST' &&
+                response.status() === 201
+        ),
+        page.getByRole('button', { name: 'Create team' }).last().click(),
+    ]);
+
+    const row = page.getByTestId('member_group_row').filter({ hasText: teamName });
+    await expect(row).toBeVisible();
+    await expect(row).toContainText('0 members');
+
+    await row.getByRole('button', { name: 'Delete' }).click();
+    await Promise.all([
+        page.waitForResponse(
+            (response) =>
+                response.url().includes('/member-groups/') &&
+                response.request().method() === 'DELETE' &&
+                response.status() === 204
+        ),
+        row.getByRole('button', { name: 'Click again to delete' }).click(),
+    ]);
+    await expect(page.getByTestId('member_group_row').filter({ hasText: teamName })).toHaveCount(0);
+});

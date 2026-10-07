@@ -1,15 +1,14 @@
 <script setup lang="ts">
 import MultiselectDropdown from '@/packages/ui/src/Input/MultiselectDropdown.vue';
-import { useMembersQuery } from '@/utils/useMembersQuery';
-import type { Member } from '@/packages/api/src';
+import { useReportingMembers, type ReportingMember } from '@/utils/useReportingMembers';
 
-const { members } = useMembersQuery();
+const { members } = useReportingMembers();
 
-function getKeyFromItem(item: Member) {
+function getKeyFromItem(item: ReportingMember) {
     return item.id;
 }
 
-function getNameForItem(item: Member) {
+function getNameForItem(item: ReportingMember) {
     return item.name;
 }
 

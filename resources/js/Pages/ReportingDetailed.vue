@@ -39,7 +39,7 @@ import { useTasksQuery } from '@/utils/useTasksQuery';
 import { useClientsQuery } from '@/utils/useClientsQuery';
 import { useClientsStore } from '@/utils/useClients';
 import { getOrganizationCurrencyString } from '@/utils/money';
-import { useMembersQuery } from '@/utils/useMembersQuery';
+import { useReportingMembers } from '@/utils/useReportingMembers';
 import { useQueryClient } from '@tanstack/vue-query';
 import { getCurrentOrganizationId, getCurrentMembershipId } from '@/utils/useUser';
 import ReportingTabNavbar from '@/Components/Common/Reporting/ReportingTabNavbar.vue';
@@ -48,7 +48,11 @@ import type { ExportFormat } from '@/types/reporting';
 import { useNotificationsStore } from '@/utils/notification';
 import TimeEntryMassActionRow from '@/packages/ui/src/TimeEntry/TimeEntryMassActionRow.vue';
 import { isAllowedToPerformPremiumAction } from '@/utils/billing';
-import { canCreateProjects, canViewAllTimeEntries } from '@/utils/permissions';
+import {
+    canCreateProjects,
+    canOnlyViewOwnTimeEntries,
+    canViewAllTimeEntries,
+} from '@/utils/permissions';
 import ReportingExportModal from '@/Components/Common/Reporting/ReportingExportModal.vue';
 import ReportingFilterBar from '@/Components/Common/Reporting/ReportingFilterBar.vue';
 import { useTimeEntriesReportQuery } from '@/utils/useTimeEntriesReportQuery';
@@ -79,7 +83,7 @@ const roundingEnabled = ref<boolean>(false);
 const roundingType = ref<TimeEntryRoundingType>('nearest');
 const roundingMinutes = ref<number>(15);
 
-const { members } = useMembersQuery();
+const { members } = useReportingMembers();
 const { organization } = useOrganizationQuery(getCurrentOrganizationId()!);
 const pageLimit = 15;
 
@@ -99,7 +103,7 @@ function getFilterAttributes() {
     };
     const params = {
         ...defaultParams,
-        member_id: !canViewAllTimeEntries() ? getCurrentMembershipId() : undefined,
+        member_id: canOnlyViewOwnTimeEntries() ? getCurrentMembershipId() : undefined,
         member_ids: selectedMembers.value.length > 0 ? selectedMembers.value : undefined,
         project_ids: selectedProjects.value.length > 0 ? selectedProjects.value : undefined,
         task_ids: selectedTasks.value.length > 0 ? selectedTasks.value : undefined,
@@ -384,6 +388,9 @@ async function downloadExport(format: ExportFormat) {
                     :organization-billable-rate="organization?.billable_rate ?? null"
                     :duplicate-time-entry="() => createTimeEntry(entry)"
                     :members="members"
+                    :readonly="
+                        !canViewAllTimeEntries() && entry.member_id !== getCurrentMembershipId()
+                    "
                     is-report
                     show-date
                     show-member

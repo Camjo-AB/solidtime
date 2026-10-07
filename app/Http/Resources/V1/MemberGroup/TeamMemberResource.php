@@ -26,6 +26,8 @@ class TeamMemberResource extends BaseResource
         return [
             /** @var string $id ID of the member */
             'id' => $this->resource->id,
+            /** @var string $user_id ID of the user (time entries are grouped by user in the reporting) */
+            'user_id' => $this->resource->user_id,
             /** @var string $name Name of the member */
             'name' => $this->resource->user->name,
         ];

@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import { type Component } from 'vue';
 import { getCurrentRole, getCurrentUser } from '@/utils/useUser';
 import { useProjectsQuery } from '@/utils/useProjectsQuery';
-import { useMembersQuery } from '@/utils/useMembersQuery';
+import { useReportingMembers } from '@/utils/useReportingMembers';
 import { useTasksQuery } from '@/utils/useTasksQuery';
 import { useClientsQuery } from '@/utils/useClientsQuery';
 import { useTagsQuery } from '@/utils/useTagsQuery';
@@ -39,7 +39,7 @@ export type GroupingOption =
 export const useReportingStore = defineStore('reporting', () => {
     // Cache query composables to avoid creating new subscriptions on every call
     const { projects } = useProjectsQuery();
-    const { members } = useMembersQuery();
+    const { members } = useReportingMembers();
     const { tasks } = useTasksQuery();
     const { clients } = useClientsQuery();
     const { tags } = useTagsQuery();
@@ -71,10 +71,14 @@ export const useReportingStore = defineStore('reporting', () => {
             return projects.value.find((project) => project.id === key)?.name;
         }
         if (type === 'user') {
+            const member = members.value.find((member) => member.user_id === key);
+            if (member) {
+                return member.name;
+            }
             if (getCurrentRole() === 'employee') {
                 return getCurrentUser().name;
             }
-            return members.value.find((member) => member.user_id === key)?.name;
+            return undefined;
         }
         if (type === 'task') {
             return tasks.value.find((task) => task.id === key)?.name;

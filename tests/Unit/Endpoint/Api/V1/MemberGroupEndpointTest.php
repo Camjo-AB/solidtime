@@ -189,7 +189,7 @@ class MemberGroupEndpointTest extends ApiEndpointTestAbstract
         $response->assertSuccessful();
         $ids = collect($response->json('data'))->pluck('id')->all();
         $this->assertEqualsCanonicalizing([$data->member->getKey(), $teammate->getKey()], $ids);
-        $this->assertSame(['id', 'name'], array_keys($response->json('data.0')));
+        $this->assertSame(['id', 'user_id', 'name'], array_keys($response->json('data.0')));
     }
 
     public function test_team_members_fails_for_employee_without_group(): void
@@ -241,8 +241,8 @@ class MemberGroupEndpointTest extends ApiEndpointTestAbstract
         $aggregate->assertJsonPath('data.seconds', 110);
         $index->assertSuccessful();
         $this->assertEqualsCanonicalizing(
-            [$data->member->getKey(), $teammate->getKey()],
-            collect($index->json('data'))->pluck('member_id')->all()
+            [$data->user->getKey(), $teammate->user_id],
+            collect($index->json('data'))->pluck('user_id')->all()
         );
     }
 

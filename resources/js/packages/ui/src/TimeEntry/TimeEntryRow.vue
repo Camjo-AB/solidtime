@@ -43,7 +43,7 @@ const props = defineProps<{
     tasks: Task[];
     tags: Tag[];
     clients: Client[];
-    members?: Member[];
+    members?: Pick<Member, 'user_id' | 'name'>[];
     createTag: (name: string) => Promise<Tag | undefined>;
     createProject: (project: CreateProjectBody) => Promise<Project | undefined>;
     createClient: (client: CreateClientBody) => Promise<Client | undefined>;
@@ -62,6 +62,8 @@ const props = defineProps<{
     canCreateProject: boolean;
     enableEstimatedTime: boolean;
     isReport?: boolean;
+    /** Show the entry without any way to change it, e.g. a teammate's entry in the reporting. */
+    readonly?: boolean;
 }>();
 
 const emit = defineEmits<{ selected: []; unselected: [] }>();
@@ -143,12 +145,14 @@ async function handleDeleteTimeEntry() {
 
 <template>
     <ContextMenu>
-        <ContextMenuTrigger as-child>
+        <ContextMenuTrigger as-child :disabled="readonly">
             <div
                 class="border-b border-default-background-separator transition min-w-0 bg-row-background"
                 data-testid="time_entry_row">
                 <MainContainer class="min-w-0">
-                    <div class="@xl:flex py-2 min-w-0 items-center justify-between group">
+                    <div
+                        class="@xl:flex py-2 min-w-0 items-center justify-between group"
+                        :inert="readonly || undefined">
                         <!-- Desktop layout -->
                         <div class="hidden @lg:flex items-center min-w-0">
                             <Checkbox :checked="selected" @update:checked="onSelectChange" />

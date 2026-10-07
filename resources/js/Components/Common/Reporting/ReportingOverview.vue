@@ -31,7 +31,7 @@ import {
 } from '@/packages/ui/src';
 import ReportCreateModal from '@/Components/Common/Report/ReportCreateModal.vue';
 import UpgradeModal from '@/Components/Common/UpgradeModal.vue';
-import { canCreateReports } from '@/utils/permissions';
+import { canCreateReports, canOnlyViewOwnTimeEntries } from '@/utils/permissions';
 import { isAllowedToPerformPremiumAction } from '@/utils/billing';
 import { computed, type ComputedRef, inject, ref, watch } from 'vue';
 import { type GroupingOption, useReportingStore } from '@/utils/useReporting';
@@ -128,7 +128,7 @@ const filterParams = computed<AggregatedTimeEntriesQueryParams>(() => {
         tag_match_type: selectedTags.value.length > 0 ? tagMatchType.value : undefined,
         billable: billable.value !== null ? billable.value : undefined,
         type: entryType.value !== null ? entryType.value : undefined,
-        member_id: getCurrentRole() === 'employee' ? getCurrentMembershipId() : undefined,
+        member_id: canOnlyViewOwnTimeEntries() ? getCurrentMembershipId() : undefined,
         rounding_type: roundingEnabled.value ? roundingType.value : undefined,
         rounding_minutes: roundingEnabled.value ? roundingMinutes.value : undefined,
     };

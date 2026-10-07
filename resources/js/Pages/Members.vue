@@ -11,7 +11,8 @@ import MemberInviteModal from '@/Components/Common/Member/MemberInviteModal.vue'
 import type { Role } from '@/types/jetstream';
 import PageTitle from '@/Components/Common/PageTitle.vue';
 import InvitationTable from '@/Components/Common/Invitation/InvitationTable.vue';
-import { canCreateInvitations } from '@/utils/permissions';
+import { canCreateInvitations, canViewMemberGroups } from '@/utils/permissions';
+import MemberGroupTable from '@/Components/Common/MemberGroup/MemberGroupTable.vue';
 import { useTableSortState } from '@/utils/useTableSortState';
 import type { SortColumn } from '@/Components/Common/Member/MemberTable.vue';
 
@@ -21,7 +22,7 @@ defineProps<{
     availableRoles: Role[];
 }>();
 
-const activeTab = ref<'all' | 'invitations'>('all');
+const activeTab = ref<'all' | 'invitations' | 'teams'>('all');
 
 const { tableState, handleSort } = useTableSortState<SortColumn>('member-table-state', {
     sortColumn: 'name',
@@ -38,6 +39,7 @@ const { tableState, handleSort } = useTableSortState<SortColumn>('member-table-s
                 <TabBar v-model="activeTab">
                     <TabBarItem value="all">All</TabBarItem>
                     <TabBarItem value="invitations">Invitations</TabBarItem>
+                    <TabBarItem v-if="canViewMemberGroups()" value="teams">Teams</TabBarItem>
                 </TabBar>
             </div>
             <SecondaryButton
@@ -57,5 +59,6 @@ const { tableState, handleSort } = useTableSortState<SortColumn>('member-table-s
             :sort-direction="tableState.sortDirection"
             @sort="handleSort"></MemberTable>
         <InvitationTable v-if="activeTab === 'invitations'"></InvitationTable>
+        <MemberGroupTable v-if="activeTab === 'teams'"></MemberGroupTable>
     </AppLayout>
 </template>

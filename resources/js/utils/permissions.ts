@@ -126,6 +126,29 @@ export function canDeleteReport() {
 export function canViewAllTimeEntries() {
     return currentUserHasPermission('time-entries:view:all');
 }
+
+/** Employees in a team (member group) can view the time entries of their teammates. */
+export function canViewTeamTimeEntries() {
+    return currentUserHasPermission('time-entries:view:team');
+}
+
+/** Whether the reporting is limited to the current member's own time entries. */
+export function canOnlyViewOwnTimeEntries() {
+    return !canViewAllTimeEntries() && !canViewTeamTimeEntries();
+}
+
+export function canViewMemberGroups() {
+    return currentUserHasPermission('member-groups:view');
+}
+export function canCreateMemberGroups() {
+    return currentUserHasPermission('member-groups:create');
+}
+export function canUpdateMemberGroups() {
+    return currentUserHasPermission('member-groups:update');
+}
+export function canDeleteMemberGroups() {
+    return currentUserHasPermission('member-groups:delete');
+}
 export function canViewInvoices() {
     return currentUserHasPermission('invoices:view');
 }
