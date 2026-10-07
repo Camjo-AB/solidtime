@@ -41,7 +41,7 @@ function updateProject() {
 </script>
 
 <template>
-    <div class="flex items-center w-[130px] @2xl:w-auto shrink min-w-0">
+    <div class="flex items-center flex-1 shrink min-w-0">
         <TimeTrackerProjectTaskDropdown
             v-model:project="currentTimeEntry.project_id"
             v-model:task="currentTimeEntry.task_id"
@@ -57,9 +57,10 @@ function updateProject() {
             :enable-estimated-time="enableEstimatedTime"
             @changed="updateProject"></TimeTrackerProjectTaskDropdown>
     </div>
-    <div class="flex items-center space-x-0 @4xl:space-x-2 px-2 @4xl:px-4 shrink-0">
+    <div class="flex items-center space-x-1 @4xl:space-x-2 pl-2 pr-1 shrink min-w-0 max-w-[60%]">
         <TimeTrackerTagDropdown
             v-model="currentTimeEntry.tags"
+            show-label
             :create-tag="createTag"
             :tags="tags"
             @changed="emit('updateTimeEntry')"></TimeTrackerTagDropdown>

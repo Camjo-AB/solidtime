@@ -95,30 +95,56 @@ watch(
 <template>
     <div class="flex items-center relative @container" data-testid="dashboard_timer">
         <div
-            class="flex flex-col @2xl:flex-row w-full justify-between rounded-lg border transition shadow-card"
+            class="flex flex-col w-full rounded-lg border transition shadow-card min-w-0"
             :class="
                 isOnBreak
                     ? 'bg-amber-500/10 border-amber-500/30'
                     : 'bg-card-background border-card-border'
             ">
-            <div class="flex flex-1 items-center relative">
-                <div
-                    v-if="isOnBreak"
-                    class="flex w-full items-center gap-2 py-4 sm:py-2.5 px-3.5 @2xl:px-4 text-base font-medium text-amber-600 dark:text-amber-400">
-                    <Coffee class="w-5 h-5 shrink-0" />
-                    <span>On break</span>
+            <div class="flex items-center min-w-0">
+                <div class="flex flex-1 items-center relative min-w-0">
+                    <div
+                        v-if="isOnBreak"
+                        class="flex w-full items-center gap-2 py-4 sm:py-2.5 px-3.5 @2xl:px-4 text-base font-medium text-amber-600 dark:text-amber-400">
+                        <Coffee class="w-5 h-5 shrink-0" />
+                        <span>On break</span>
+                    </div>
+                    <TimeTrackerEntryInput
+                        v-else
+                        ref="entryInput"
+                        v-model:current-time-entry="currentTimeEntry"
+                        :time-entries="timeEntries"
+                        :projects="projects"
+                        :tasks="tasks"
+                        :is-active="isActive"
+                        @start-timer="emit('startTimer')"
+                        @update-time-entry="emit('updateTimeEntry')"></TimeTrackerEntryInput>
                 </div>
-                <TimeTrackerEntryInput
-                    v-else
-                    ref="entryInput"
-                    v-model:current-time-entry="currentTimeEntry"
-                    :time-entries="timeEntries"
-                    :projects="projects"
-                    :tasks="tasks"
-                    :is-active="isActive"
-                    @start-timer="emit('startTimer')"
-                    @update-time-entry="emit('updateTimeEntry')"></TimeTrackerEntryInput>
-                <div class="@2xl:hidden pr-3 shrink-0 flex items-center space-x-2">
+                <button
+                    v-if="isOnBreak && canResumeAfterBreak"
+                    type="button"
+                    class="mx-2 flex min-w-0 shrink items-center gap-1.5 h-8 px-3 rounded-md bg-transparent border border-amber-500/40 hover:bg-amber-500/15 text-sm font-medium text-amber-600 dark:text-amber-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 transition"
+                    @click="emit('resumeAfterBreak')">
+                    <Play class="w-4 h-4 shrink-0" />
+                    <span class="truncate">{{
+                        resumeDescription ? `Resume "${resumeDescription}"` : 'Resume'
+                    }}</span>
+                </button>
+                <div
+                    class="border-l shrink-0"
+                    :class="isOnBreak ? 'border-amber-500/40' : 'border-card-border'">
+                    <TimeTrackerRangeSelector
+                        v-model:current-time-entry="currentTimeEntry"
+                        v-model:live-timer="liveTimer"
+                        :is-on-break="isOnBreak"
+                        @start-live-timer="emit('startLiveTimer')"
+                        @stop-live-timer="emit('stopLiveTimer')"
+                        @update-timer="emit('updateTimeEntry')"
+                        @start-timer="emit('startTimer')"
+                        @create-time-entry="emit('createTimeEntry')"
+                        @keydown.enter="onRangeEnter"></TimeTrackerRangeSelector>
+                </div>
+                <div class="@2xl:hidden pr-3 pl-1 shrink-0 flex items-center space-x-2">
                     <button
                         v-if="breaksEnabled && !isOnBreak && isActive"
                         type="button"
@@ -134,9 +160,12 @@ watch(
                         @changed="onToggleButtonPress"></TimeTrackerStartStop>
                 </div>
             </div>
-            <div class="flex items-center justify-between pl-2 shrink min-w-0">
+            <!-- Project, task, tags and billable for the next or running entry -->
+            <div
+                v-if="!isOnBreak && timeTrackerMode !== 'simple'"
+                class="flex items-center min-w-0 border-t border-card-border px-1 py-1"
+                data-testid="time_tracker_project_controls">
                 <TimeTrackerProjectControls
-                    v-if="!isOnBreak && timeTrackerMode !== 'simple'"
                     v-model:current-time-entry="currentTimeEntry"
                     :projects="projects"
                     :tasks="tasks"
@@ -150,30 +179,6 @@ watch(
                     :enable-estimated-time="enableEstimatedTime"
                     :can-create-project="canCreateProject"
                     @update-time-entry="emit('updateTimeEntry')"></TimeTrackerProjectControls>
-                <button
-                    v-if="isOnBreak && canResumeAfterBreak"
-                    type="button"
-                    class="mx-2 flex min-w-0 shrink items-center gap-1.5 h-8 px-3 rounded-md bg-transparent border border-amber-500/40 hover:bg-amber-500/15 text-sm font-medium text-amber-600 dark:text-amber-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 transition"
-                    @click="emit('resumeAfterBreak')">
-                    <Play class="w-4 h-4 shrink-0" />
-                    <span class="truncate">{{
-                        resumeDescription ? `Resume "${resumeDescription}"` : 'Resume'
-                    }}</span>
-                </button>
-                <div
-                    class="border-l"
-                    :class="isOnBreak ? 'border-amber-500/40' : 'border-card-border'">
-                    <TimeTrackerRangeSelector
-                        v-model:current-time-entry="currentTimeEntry"
-                        v-model:live-timer="liveTimer"
-                        :is-on-break="isOnBreak"
-                        @start-live-timer="emit('startLiveTimer')"
-                        @stop-live-timer="emit('stopLiveTimer')"
-                        @update-timer="emit('updateTimeEntry')"
-                        @start-timer="emit('startTimer')"
-                        @create-time-entry="emit('createTimeEntry')"
-                        @keydown.enter="onRangeEnter"></TimeTrackerRangeSelector>
-                </div>
             </div>
         </div>
         <div class="pl-4 @2xl:pl-6 pr-3 hidden @2xl:flex items-center space-x-3">

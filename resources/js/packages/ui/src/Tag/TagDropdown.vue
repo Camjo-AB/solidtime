@@ -35,7 +35,8 @@ const model = defineModel<string[]>({
     default: () => [],
 });
 
-const open = ref(false);
+/** Whether the dropdown is open; bindable so a host can react, e.g. by resizing its window. */
+const open = defineModel<boolean>('open', { default: false });
 const searchValue = ref('');
 // Pinned on open so rows don't re-sort while toggling; the tag list itself stays reactive.
 const pinnedSelection = ref<Set<string>>(new Set());

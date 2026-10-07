@@ -11,6 +11,7 @@ import type { Page } from '@playwright/test';
 import { newTagResponse } from './utils/tags';
 import {
     createProjectViaApi,
+    createTagViaApi,
     createTaskViaApi,
     createClientViaApi,
     createTimeEntryViaApi,
@@ -777,4 +778,43 @@ test('test that simple mode hides the project, tag and billable controls', async
     await page.getByRole('button', { name: 'Time entry actions' }).click();
     await page.getByRole('menuitem', { name: 'Switch to project mode' }).click();
     await expect(page.getByRole('button', { name: 'No Project' })).toBeVisible();
+});
+
+test('test that project and tag picked before pressing play are saved on the new time entry', async ({
+    page,
+    ctx,
+}) => {
+    const projectName = 'Picked Project ' + Math.floor(Math.random() * 10000);
+    const tagName = 'Picked Tag ' + Math.floor(Math.random() * 10000);
+    const project = await createProjectViaApi(ctx, { name: projectName });
+    const tag = await createTagViaApi(ctx, { name: tagName });
+    await goToDashboard(page);
+
+    // Pick the project in the row below the description
+    await page
+        .getByTestId('time_tracker_project_controls')
+        .getByRole('button', { name: 'No Project' })
+        .click();
+    await page.getByTestId('client_dropdown_search').fill(projectName);
+    await page.getByRole('option').filter({ hasText: projectName }).click();
+
+    // Pick the tag; the field then shows its name
+    await page.getByTestId('tag_dropdown').click();
+    await page.getByRole('option', { name: tagName }).click();
+    await page.getByTestId('tag_dropdown_search').press('Escape');
+    await expect(page.getByTestId('tag_dropdown')).toHaveText(tagName);
+
+    const [createRequest] = await Promise.all([
+        page.waitForRequest(
+            (request) => request.url().includes('/time-entries') && request.method() === 'POST'
+        ),
+        startOrStopTimerWithButton(page),
+    ]);
+    const body = createRequest.postDataJSON();
+    expect(body.project_id).toBe(project.id);
+    expect(body.tags).toEqual([tag.id]);
+    await assertThatTimerHasStarted(page);
+
+    await Promise.all([stoppedTimeEntryResponse(page), startOrStopTimerWithButton(page)]);
+    await assertThatTimerIsStopped(page);
 });

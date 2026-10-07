@@ -28,7 +28,8 @@ const project = defineModel<string | null>('project', {
 });
 
 const searchInput = ref<HTMLInputElement | null>(null);
-const open = ref(false);
+/** Whether the dropdown is open; bindable so a host can react, e.g. by resizing its window. */
+const open = defineModel<boolean>('open', { default: false });
 const dropdownViewport = ref<HTMLElement | null>(null);
 
 const searchValue = ref('');
