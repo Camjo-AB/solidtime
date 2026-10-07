@@ -14,8 +14,7 @@ import {
     canUpdateMemberGroups,
 } from '@/utils/permissions';
 
-const { memberGroups, createMemberGroup, updateMemberGroup, deleteMemberGroup } =
-    useMemberGroups();
+const { memberGroups, createMemberGroup, updateMemberGroup, deleteMemberGroup } = useMemberGroups();
 const { members } = useMembersQuery();
 
 const showModal = ref(false);
@@ -113,7 +112,11 @@ async function onDelete(memberGroup: MemberGroup) {
                         :icon="TrashIcon"
                         size="small"
                         @click="onDelete(memberGroup)">
-                        {{ groupPendingDelete === memberGroup.id ? 'Click again to delete' : 'Delete' }}
+                        {{
+                            groupPendingDelete === memberGroup.id
+                                ? 'Click again to delete'
+                                : 'Delete'
+                        }}
                     </SecondaryButton>
                 </div>
             </li>
