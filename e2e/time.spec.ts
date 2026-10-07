@@ -1660,8 +1660,10 @@ test('test that tag selection works in create modal', async ({ page }) => {
     const tagBody = await tagResponse.json();
     const tagId = tagBody.data.id;
 
-    // Verify tag button now shows "1 Tag"
-    await expect(page.getByRole('dialog').getByRole('button', { name: '1 Tag' })).toBeVisible();
+    // Verify tag button now shows the tag name instead of a count
+    await expect(
+        page.getByRole('dialog').getByRole('button', { name: tagName, exact: true })
+    ).toBeVisible();
 
     // Set duration
     await page.locator('[role="dialog"] input[name="Duration"]').fill('1h');
