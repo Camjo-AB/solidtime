@@ -27,6 +27,7 @@ import { Coffee } from '@lucide/vue';
 import type { Tag, Task } from '@/packages/api/src';
 import TimePickerSimple from '@/packages/ui/src/Input/TimePickerSimple.vue';
 import { useBreaksEnabled } from '@/packages/ui/src/utils/useBreaksEnabled';
+import { selectedTagNames, tagLabel } from '@/packages/ui/src/utils/tags';
 
 // Breaks may have been disabled after this entry was created, so an existing break can still be
 // edited (and converted back), but a work entry may only offer the break option when enabled.
@@ -161,6 +162,10 @@ const typeProxy = computed({
         }
     },
 });
+const tagButtonLabel = computed(() => tagLabel(editableTimeEntry.value?.tags ?? [], props.tags));
+const tagTitle = computed(() =>
+    selectedTagNames(editableTimeEntry.value?.tags ?? [], props.tags).join(', ')
+);
 </script>
 
 <template>
@@ -225,12 +230,13 @@ const typeProxy = computed({
                             :tags="tags"
                             :show-no-tag-option="false">
                             <template #trigger>
-                                <Button variant="input">
-                                    <TagIcon class="h-4 text-icon-default" />
-                                    <span>{{
-                                        editableTimeEntry.tags.length === 0
-                                            ? 'Tags'
-                                            : `${editableTimeEntry.tags.length} Tag${editableTimeEntry.tags.length > 1 ? 's' : ''}`
+                                <Button
+                                    variant="input"
+                                    class="min-w-0"
+                                    :title="tagTitle || undefined">
+                                    <TagIcon class="h-4 shrink-0 text-icon-default" />
+                                    <span class="max-w-48 truncate">{{
+                                        tagButtonLabel || 'Tags'
                                     }}</span>
                                 </Button>
                             </template>

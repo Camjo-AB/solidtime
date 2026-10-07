@@ -3,6 +3,7 @@ import TagDropdown from '@/packages/ui/src/Tag/TagDropdown.vue';
 import { computed } from 'vue';
 import TagBadge from '@/packages/ui/src/Tag/TagBadge.vue';
 import type { Tag } from '@/packages/api/src';
+import { selectedTagNames, tagLabel } from '@/packages/ui/src/utils/tags';
 
 const props = withDefaults(
     defineProps<{
@@ -27,18 +28,9 @@ const timeEntryTags = computed<Tag[]>(() => {
     return props.tags.filter((tag) => model.value.includes(tag.id));
 });
 
-const allTagNames = computed(() => {
-    return timeEntryTags.value.map((tag: Tag) => tag.name).join(', ');
-});
+const allTagNames = computed(() => selectedTagNames(model.value, props.tags).join(', '));
 
-const displayName = computed(() => {
-    if (timeEntryTags.value.length >= 3) {
-        const firstTag = timeEntryTags.value[0]?.name || '';
-        const remaining = timeEntryTags.value.length - 1;
-        return `${firstTag} + ${remaining} more`;
-    }
-    return allTagNames.value;
-});
+const displayName = computed(() => tagLabel(model.value, props.tags));
 </script>
 <template>
     <TagDropdown

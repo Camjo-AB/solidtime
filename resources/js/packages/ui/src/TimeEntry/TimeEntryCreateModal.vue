@@ -20,6 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Button } from '@/packages/ui/src/Buttons';
 import TimeRangeFields from '@/packages/ui/src/TimeEntry/TimeRangeFields.vue';
 import type { Tag, Task } from '@/packages/api/src';
+import { selectedTagNames, tagLabel } from '@/packages/ui/src/utils/tags';
 
 const show = defineModel('show', { default: false });
 const saving = ref(false);
@@ -123,6 +124,8 @@ const billableProxy = computed({
         timeEntry.value.billable = value === 'true';
     },
 });
+const tagButtonLabel = computed(() => tagLabel(timeEntry.value.tags, props.tags));
+const tagTitle = computed(() => selectedTagNames(timeEntry.value.tags, props.tags).join(', '));
 </script>
 
 <template>
@@ -171,12 +174,10 @@ const billableProxy = computed({
                         :tags="tags"
                         :show-no-tag-option="false">
                         <template #trigger>
-                            <Button variant="input">
-                                <TagIcon class="h-4 text-icon-default" />
-                                <span>{{
-                                    timeEntry.tags.length === 0
-                                        ? 'Tags'
-                                        : `${timeEntry.tags.length} Tag${timeEntry.tags.length > 1 ? 's' : ''}`
+                            <Button variant="input" class="min-w-0" :title="tagTitle || undefined">
+                                <TagIcon class="h-4 shrink-0 text-icon-default" />
+                                <span class="max-w-48 truncate">{{
+                                    tagButtonLabel || 'Tags'
                                 }}</span>
                             </Button>
                         </template>
