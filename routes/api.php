@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\ExportController;
 use App\Http\Controllers\Api\V1\ImportController;
 use App\Http\Controllers\Api\V1\InvitationController;
 use App\Http\Controllers\Api\V1\MemberController;
+use App\Http\Controllers\Api\V1\MemberGroupController;
 use App\Http\Controllers\Api\V1\OrganizationController;
 use App\Http\Controllers\Api\V1\ProjectController;
 use App\Http\Controllers\Api\V1\ProjectMemberController;
@@ -153,6 +154,15 @@ Route::prefix('v1')->name('v1.')->group(static function (): void {
             Route::post('/tags', [TagController::class, 'store'])->name('store')->middleware('check-organization-blocked');
             Route::put('/tags/{tag}', [TagController::class, 'update'])->name('update')->middleware('check-organization-blocked');
             Route::delete('/tags/{tag}', [TagController::class, 'destroy'])->name('destroy');
+        });
+
+        // Member group ("team") routes
+        Route::name('member-groups.')->prefix('/organizations/{organization}')->group(static function (): void {
+            Route::get('/member-groups', [MemberGroupController::class, 'index'])->name('index');
+            Route::get('/member-groups/team-members', [MemberGroupController::class, 'teamMembers'])->name('team-members');
+            Route::post('/member-groups', [MemberGroupController::class, 'store'])->name('store')->middleware('check-organization-blocked');
+            Route::put('/member-groups/{memberGroup}', [MemberGroupController::class, 'update'])->name('update')->middleware('check-organization-blocked');
+            Route::delete('/member-groups/{memberGroup}', [MemberGroupController::class, 'destroy'])->name('destroy');
         });
 
         // Client routes

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Enums\Role;
+use App\Models\Member;
 use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
@@ -64,6 +65,10 @@ class PermissionStore
                 'invitations:resend',
                 'invitations:remove',
                 'members:view',
+                'member-groups:view',
+                'member-groups:create',
+                'member-groups:update',
+                'member-groups:delete',
                 'members:invite-placeholder',
                 'members:change-ownership',
                 'members:make-placeholder',
@@ -137,6 +142,10 @@ class PermissionStore
                 'invitations:resend',
                 'invitations:remove',
                 'members:view',
+                'member-groups:view',
+                'member-groups:create',
+                'member-groups:update',
+                'member-groups:delete',
                 'members:invite-placeholder',
                 'members:make-placeholder',
                 'members:merge-into',
@@ -345,6 +354,18 @@ class PermissionStore
                 'tasks:update',
                 'tasks:delete',
             ]);
+        }
+
+        // Employees who are in a member group ("team") can view the time entries of the other
+        // members of their groups. The members they may see are resolved by MemberGroupService.
+        if ($role === Role::Employee->value) {
+            $member = Member::query()
+                ->whereBelongsTo($organization, 'organization')
+                ->where('user_id', $user->getKey())
+                ->first();
+            if ($member !== null && app(MemberGroupService::class)->isInAnyGroup($member)) {
+                $permissions[] = 'time-entries:view:team';
+            }
         }
 
         return $permissions;

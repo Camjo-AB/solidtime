@@ -181,6 +181,9 @@ class MemberService
             ->whereBelongsToOrganization($organization)
             ->whereBelongsTo($fromMember, 'member')
             ->delete();
+
+        // Member groups ("teams")
+        app(MemberGroupService::class)->moveMemberships($fromMember, $toMember);
     }
 
     /**

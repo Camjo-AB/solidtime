@@ -30,6 +30,7 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Service\LocalizationService;
+use App\Service\MemberGroupService;
 use App\Service\ReportExport\TimeEntriesDetailedCsvExport;
 use App\Service\ReportExport\TimeEntriesDetailedExport;
 use App\Service\ReportExport\TimeEntriesReportExport;
@@ -119,17 +120,12 @@ class TimeEntryController extends Controller
      */
     public function index(Organization $organization, TimeEntryIndexRequest $request): JsonResource
     {
-        $member = $this->member($organization);
         /** @var Member|null $memberFilter */
         $memberFilter = $request->has('member_id') ? Member::query()->findOrFail($request->input('member_id')) : null;
-        if ($memberFilter !== null && $memberFilter->getKey() === $member->getKey()) {
-            $this->checkPermission($organization, 'time-entries:view:own');
-        } else {
-            $this->checkPermission($organization, 'time-entries:view:all');
-        }
+        $restrictToMemberIds = $this->authorizeViewingTimeEntries($organization, $memberFilter, $request->input('member_ids'));
 
         $canAccessPremiumFeatures = $this->canAccessPremiumFeatures($organization);
-        $timeEntriesQuery = $this->getTimeEntriesQuery($organization, $request, $memberFilter, $canAccessPremiumFeatures);
+        $timeEntriesQuery = $this->getTimeEntriesQuery($organization, $request, $memberFilter, $canAccessPremiumFeatures, $restrictToMemberIds);
 
         $totalCount = $timeEntriesQuery->count();
 
@@ -181,9 +177,49 @@ class TimeEntryController extends Controller
     }
 
     /**
+     * Checks whether the current user may view the requested time entries and returns the members
+     * the query has to be restricted to.
+     *
+     * - Own time entries (member_id is the user's member) need `time-entries:view:own`.
+     * - Everything else needs `time-entries:view:all`, or `time-entries:view:team`, in which case
+     *   only the members that share a member group with the user are visible.
+     *
+     * @param  array<string>|null  $memberIds  The member_ids filter of the request
+     * @return array<string>|null Member IDs the query must be restricted to, null if no restriction is needed
+     *
+     * @throws AuthorizationException
+     */
+    private function authorizeViewingTimeEntries(Organization $organization, ?Member $memberFilter, ?array $memberIds): ?array
+    {
+        $member = $this->member($organization);
+        if ($memberFilter !== null && $memberFilter->getKey() === $member->getKey()) {
+            $this->checkPermission($organization, 'time-entries:view:own');
+
+            return null;
+        }
+        if ($this->hasPermission($organization, 'time-entries:view:all')) {
+            return null;
+        }
+        if (! $this->hasPermission($organization, 'time-entries:view:team')) {
+            throw new AuthorizationException;
+        }
+
+        $visibleMemberIds = app(MemberGroupService::class)->visibleMemberIds($member);
+        $requestedMemberIds = array_merge($memberFilter !== null ? [$memberFilter->getKey()] : [], $memberIds ?? []);
+        foreach ($requestedMemberIds as $requestedMemberId) {
+            if (! in_array($requestedMemberId, $visibleMemberIds, true)) {
+                throw new AuthorizationException('Member is not in one of your teams');
+            }
+        }
+
+        return $visibleMemberIds;
+    }
+
+    /**
+     * @param  array<string>|null  $restrictToMemberIds  Only include time entries of these members (null = no restriction)
      * @return Builder<TimeEntry>
      */
-    private function getTimeEntriesQuery(Organization $organization, TimeEntryIndexRequest|TimeEntryIndexExportRequest $request, ?Member $member, bool $canAccessPremiumFeatures): Builder
+    private function getTimeEntriesQuery(Organization $organization, TimeEntryIndexRequest|TimeEntryIndexExportRequest $request, ?Member $member, bool $canAccessPremiumFeatures, ?array $restrictToMemberIds): Builder
     {
         $select = TimeEntry::SELECT_COLUMNS;
         $roundingType = $canAccessPremiumFeatures ? $request->getRoundingType() : null;
@@ -205,6 +241,7 @@ class TimeEntryController extends Controller
         $filter->addActiveFilter($request->input('active'));
         $filter->addMemberIdFilter($member);
         $filter->addMemberIdsFilter($request->input('member_ids'));
+        $filter->addMemberIdsFilter($restrictToMemberIds);
         $filter->addProjectIdsFilter($request->input('project_ids'));
         $filter->addTagIdsFilter($request->input('tag_ids'), $request->getTagMatchType());
         $filter->addTaskIdsFilter($request->input('task_ids'));
@@ -224,14 +261,9 @@ class TimeEntryController extends Controller
      */
     public function indexExport(Organization $organization, TimeEntryIndexExportRequest $request, TimeEntryAggregationService $timeEntryAggregationService): JsonResponse
     {
-        $member = $this->member($organization);
         /** @var Member|null $memberFilter */
         $memberFilter = $request->has('member_id') ? Member::query()->findOrFail($request->input('member_id')) : null;
-        if ($memberFilter !== null && $memberFilter->getKey() === $member->getKey()) {
-            $this->checkPermission($organization, 'time-entries:view:own');
-        } else {
-            $this->checkPermission($organization, 'time-entries:view:all');
-        }
+        $restrictToMemberIds = $this->authorizeViewingTimeEntries($organization, $memberFilter, $request->input('member_ids'));
         $canAccessPremiumFeatures = $this->canAccessPremiumFeatures($organization);
         $debug = $request->getDebug();
         $format = $request->getFormatValue();
@@ -244,7 +276,7 @@ class TimeEntryController extends Controller
         $roundingType = $canAccessPremiumFeatures ? $request->getRoundingType() : null;
         $roundingMinutes = $canAccessPremiumFeatures ? $request->getRoundingMinutes() : null;
 
-        $timeEntriesQuery = $this->getTimeEntriesQuery($organization, $request, $memberFilter, $canAccessPremiumFeatures);
+        $timeEntriesQuery = $this->getTimeEntriesQuery($organization, $request, $memberFilter, $canAccessPremiumFeatures, $restrictToMemberIds);
         $timeEntriesQuery->with([
             'task',
             'client',
@@ -267,7 +299,7 @@ class TimeEntryController extends Controller
             if ($viewFile === false) {
                 throw new \LogicException('View file not found');
             }
-            $timeEntriesAggregateQuery = $this->getTimeEntriesAggregateQuery($organization, $request, $memberFilter);
+            $timeEntriesAggregateQuery = $this->getTimeEntriesAggregateQuery($organization, $request, $memberFilter, $restrictToMemberIds);
             $aggregatedData = $timeEntryAggregationService->getAggregatedTimeEntries(
                 $timeEntriesAggregateQuery,
                 null,
@@ -376,21 +408,16 @@ class TimeEntryController extends Controller
      */
     public function aggregate(Organization $organization, TimeEntryAggregateRequest $request, TimeEntryAggregationService $timeEntryAggregationService): array
     {
-        $member = $this->member($organization);
         /** @var Member|null $memberFilter */
         $memberFilter = $request->has('member_id') ? Member::query()->findOrFail($request->input('member_id')) : null;
-        if ($memberFilter !== null && $memberFilter->getKey() === $member->getKey()) {
-            $this->checkPermission($organization, 'time-entries:view:own');
-        } else {
-            $this->checkPermission($organization, 'time-entries:view:all');
-        }
+        $restrictToMemberIds = $this->authorizeViewingTimeEntries($organization, $memberFilter, $request->input('member_ids'));
         $canAccessPremiumFeatures = $this->canAccessPremiumFeatures($organization);
         $user = $this->user();
         $showBillableRate = $this->member($organization)->role !== Role::Employee->value || $organization->employees_can_see_billable_rates;
 
         $group1Type = $request->getGroup();
         $group2Type = $request->getSubGroup();
-        $timeEntriesAggregateQuery = $this->getTimeEntriesAggregateQuery($organization, $request, $memberFilter);
+        $timeEntriesAggregateQuery = $this->getTimeEntriesAggregateQuery($organization, $request, $memberFilter, $restrictToMemberIds);
         $roundingType = $canAccessPremiumFeatures ? $request->getRoundingType() : null;
         $roundingMinutes = $canAccessPremiumFeatures ? $request->getRoundingMinutes() : null;
 
@@ -426,14 +453,9 @@ class TimeEntryController extends Controller
      */
     public function aggregateExport(Organization $organization, TimeEntryAggregateExportRequest $request, TimeEntryAggregationService $timeEntryAggregationService): JsonResponse
     {
-        $member = $this->member($organization);
         /** @var Member|null $memberFilter */
         $memberFilter = $request->has('member_id') ? Member::query()->findOrFail($request->input('member_id')) : null;
-        if ($memberFilter !== null && $memberFilter->getKey() === $member->getKey()) {
-            $this->checkPermission($organization, 'time-entries:view:own');
-        } else {
-            $this->checkPermission($organization, 'time-entries:view:all');
-        }
+        $restrictToMemberIds = $this->authorizeViewingTimeEntries($organization, $memberFilter, $request->input('member_ids'));
         $canAccessPremiumFeatures = $this->canAccessPremiumFeatures($organization);
         $format = $request->getFormatValue();
         if ($format === ExportFormat::PDF && ! $this->canAccessPremiumFeatures($organization)) {
@@ -445,7 +467,7 @@ class TimeEntryController extends Controller
 
         $group = $request->getGroup();
         $subGroup = $request->getSubGroup();
-        $timeEntriesAggregateQuery = $this->getTimeEntriesAggregateQuery($organization, $request, $memberFilter);
+        $timeEntriesAggregateQuery = $this->getTimeEntriesAggregateQuery($organization, $request, $memberFilter, $restrictToMemberIds);
         $roundingType = $canAccessPremiumFeatures ? $request->getRoundingType() : null;
         $roundingMinutes = $canAccessPremiumFeatures ? $request->getRoundingMinutes() : null;
 
@@ -556,9 +578,10 @@ class TimeEntryController extends Controller
     }
 
     /**
+     * @param  array<string>|null  $restrictToMemberIds  Only include time entries of these members (null = no restriction)
      * @return Builder<TimeEntry>
      */
-    private function getTimeEntriesAggregateQuery(Organization $organization, TimeEntryAggregateRequest|TimeEntryAggregateExportRequest|TimeEntryIndexExportRequest $request, ?Member $member): Builder
+    private function getTimeEntriesAggregateQuery(Organization $organization, TimeEntryAggregateRequest|TimeEntryAggregateExportRequest|TimeEntryIndexExportRequest $request, ?Member $member, ?array $restrictToMemberIds): Builder
     {
         $timeEntriesQuery = TimeEntry::query()
             ->whereBelongsTo($organization, 'organization');
@@ -569,6 +592,7 @@ class TimeEntryController extends Controller
         $filter->addActiveFilter($request->input('active'));
         $filter->addMemberIdFilter($member);
         $filter->addMemberIdsFilter($request->input('member_ids'));
+        $filter->addMemberIdsFilter($restrictToMemberIds);
         $filter->addProjectIdsFilter($request->input('project_ids'));
         $filter->addTagIdsFilter($request->input('tag_ids'), $request->getTagMatchType());
         $filter->addTaskIdsFilter($request->input('task_ids'));

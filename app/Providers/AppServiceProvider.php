@@ -7,6 +7,7 @@ namespace App\Providers;
 use App\Models\Client;
 use App\Models\FailedJob;
 use App\Models\Member;
+use App\Models\MemberGroup;
 use App\Models\Organization;
 use App\Models\OrganizationInvitation;
 use App\Models\Passport\Token;
@@ -65,6 +66,7 @@ class AppServiceProvider extends ServiceProvider
         Relation::enforceMorphMap([
             'client' => Client::class,
             'failed-job' => FailedJob::class,
+            'member-group' => MemberGroup::class,
             'membership' => Member::class,
             'organization' => Organization::class,
             'organization-invitation' => OrganizationInvitation::class,

@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Support\Carbon;
@@ -27,6 +28,7 @@ use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
  * @property-read Organization $organization
  * @property-read User $user
  * @property-read Collection<int, ProjectMember> $projectMembers
+ * @property-read Collection<int, MemberGroup> $memberGroups
  * @property-read Collection<int, TimeEntry> $timeEntries
  *
  * @method static MemberFactory factory()
@@ -77,5 +79,13 @@ class Member extends Pivot implements AuditableContract
     public function projectMembers(): HasMany
     {
         return $this->hasMany(ProjectMember::class, 'member_id');
+    }
+
+    /**
+     * @return BelongsToMany<MemberGroup, $this>
+     */
+    public function memberGroups(): BelongsToMany
+    {
+        return $this->belongsToMany(MemberGroup::class, 'member_group_member', 'member_id', 'member_group_id');
     }
 }

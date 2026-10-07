@@ -9,6 +9,7 @@ use App\Events\BeforeOrganizationDeletion;
 use App\Exceptions\Api\CanNotDeleteUserWhoIsOwnerOfOrganizationWithMultipleMembers;
 use App\Models\Client;
 use App\Models\Member;
+use App\Models\MemberGroup;
 use App\Models\Organization;
 use App\Models\OrganizationInvitation;
 use App\Models\Project;
@@ -56,6 +57,9 @@ class DeletionService
 
         // Delete all time entries
         TimeEntry::query()->whereBelongsTo($organization, 'organization')->delete();
+
+        // Delete all member groups ("teams"); their memberships are deleted by cascade
+        MemberGroup::query()->whereBelongsTo($organization, 'organization')->delete();
 
         // Delete all tags
         Tag::query()->whereBelongsTo($organization, 'organization')->delete();
