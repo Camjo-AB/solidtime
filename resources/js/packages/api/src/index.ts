@@ -138,6 +138,14 @@ export type CreateInvoiceBody = ZodiosBodyByAlias<SolidTimeApi, 'createInvoice'>
 export type UpdateInvoiceBody = ZodiosBodyByAlias<SolidTimeApi, 'updateInvoice'>;
 
 export type User = ZodiosResponseByAlias<SolidTimeApi, 'getMe'>['data'];
+export type GoogleCalendarStatus = ZodiosResponseByAlias<
+    SolidTimeApi,
+    'getMyGoogleCalendar'
+>['data'];
+export type GoogleCalendarEvent = ZodiosResponseByAlias<
+    SolidTimeApi,
+    'getMyGoogleCalendarEvents'
+>['data'][0];
 export type UpdateUserBody = ZodiosBodyByAlias<SolidTimeApi, 'updateUser'>;
 export type DeleteUserBody = ZodiosBodyByAlias<SolidTimeApi, 'deleteUser'>;
 export type DeleteOrganizationBody = ZodiosBodyByAlias<SolidTimeApi, 'deleteOrganization'>;

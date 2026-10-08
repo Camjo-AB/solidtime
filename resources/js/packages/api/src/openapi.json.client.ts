@@ -5056,6 +5056,98 @@ The report is considered public if the &#x60;is_public&#x60; field is set to &#x
     },
     {
         method: 'get',
+        path: '/v1/users/me/google-calendar',
+        alias: 'getMyGoogleCalendar',
+        requestFormat: 'json',
+        response: z
+            .object({
+                data: z
+                    .object({
+                        enabled: z.boolean(),
+                        connected: z.boolean(),
+                        email: z.union([z.string(), z.null()]),
+                    })
+                    .passthrough(),
+            })
+            .passthrough(),
+        errors: [
+            {
+                status: 400,
+                description: `API exception`,
+                schema: z
+                    .object({ error: z.boolean(), key: z.string(), message: z.string() })
+                    .passthrough(),
+            },
+            {
+                status: 401,
+                description: `Unauthenticated`,
+                schema: z.object({ message: z.string() }).passthrough(),
+            },
+            {
+                status: 422,
+                description: `Validation error`,
+                schema: z
+                    .object({ message: z.string(), errors: z.record(z.array(z.string())) })
+                    .passthrough(),
+            },
+        ],
+    },
+    {
+        method: 'get',
+        path: '/v1/users/me/google-calendar/events',
+        alias: 'getMyGoogleCalendarEvents',
+        requestFormat: 'json',
+        parameters: [
+            {
+                name: 'start',
+                type: 'Query',
+                schema: z.string(),
+            },
+            {
+                name: 'end',
+                type: 'Query',
+                schema: z.string(),
+            },
+        ],
+        response: z
+            .object({
+                data: z.array(
+                    z
+                        .object({
+                            id: z.string(),
+                            title: z.string(),
+                            start: z.string(),
+                            end: z.string(),
+                            html_link: z.union([z.string(), z.null()]),
+                        })
+                        .passthrough()
+                ),
+            })
+            .passthrough(),
+        errors: [
+            {
+                status: 400,
+                description: `API exception`,
+                schema: z
+                    .object({ error: z.boolean(), key: z.string(), message: z.string() })
+                    .passthrough(),
+            },
+            {
+                status: 401,
+                description: `Unauthenticated`,
+                schema: z.object({ message: z.string() }).passthrough(),
+            },
+            {
+                status: 422,
+                description: `Validation error`,
+                schema: z
+                    .object({ message: z.string(), errors: z.record(z.array(z.string())) })
+                    .passthrough(),
+            },
+        ],
+    },
+    {
+        method: 'get',
         path: '/v1/users/me',
         alias: 'getMe',
         description: `This endpoint is independent of the organization.`,

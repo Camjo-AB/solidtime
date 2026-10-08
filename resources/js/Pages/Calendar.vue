@@ -26,6 +26,9 @@ import { canCreateProjects } from '@/utils/permissions';
 import { useCurrentTimeEntryStore } from '@/utils/useCurrentTimeEntry';
 import { useOrganizationQuery } from '@/utils/useOrganizationQuery';
 import { getCurrentOrganizationId } from '@/utils/useUser';
+import { useGoogleCalendarEvents, useGoogleCalendarStatus } from '@/utils/useGoogleCalendar';
+import { useLocalStorage } from '@vueuse/core';
+import { CalendarIcon, XMarkIcon } from '@heroicons/vue/20/solid';
 
 const { organization } = useOrganizationQuery(getCurrentOrganizationId()!);
 const calendarStart = ref<Dayjs | undefined>(undefined);
@@ -62,6 +65,24 @@ const { data: timeEntryResponse, isLoading: timeEntriesLoading } = useTimeEntrie
 const currentTimeEntries = computed(() => {
     return timeEntryResponse?.value?.data || [];
 });
+
+// Google Calendar meetings, shown read-only next to the time entries
+const googleCalendar = useGoogleCalendarStatus();
+const { events: googleCalendarEvents, error: googleCalendarError } = useGoogleCalendarEvents(
+    calendarStart,
+    calendarEnd
+);
+const googleCalendarHintDismissed = useLocalStorage(
+    'solidtime/google-calendar-hint-dismissed',
+    false
+);
+const googleCalendarNeedsReconnect = computed(() => googleCalendarError.value !== null);
+const showGoogleCalendarHint = computed(
+    () =>
+        googleCalendar.enabled.value &&
+        (googleCalendarNeedsReconnect.value ||
+            (!googleCalendar.connected.value && !googleCalendarHintDismissed.value))
+);
 
 const {
     createTimeEntry: createTimeEntryMutation,
@@ -121,26 +142,58 @@ function onRefresh() {
         title="Calendar"
         data-testid="calendar_view"
         main-class="p-0 min-h-0 overflow-hidden">
-        <TimeEntryCalendar
-            :time-entries="currentTimeEntries"
-            :projects="projects"
-            :tasks="tasks"
-            :clients="clients"
-            :tags="tags"
-            :loading="timeEntriesLoading"
-            :enable-estimated-time="isAllowedToPerformPremiumAction()"
-            :currency="getOrganizationCurrencyString()"
-            :can-create-project="canCreateProjects()"
-            :initial-date="initialDate"
-            :organization-billable-rate="organization?.billable_rate ?? null"
-            :create-time-entry="createTimeEntry"
-            :update-time-entry="updateTimeEntry"
-            :delete-time-entry="deleteTimeEntry"
-            :create-client="createClient"
-            :create-project="createProject"
-            :create-tag="createTag"
-            :activity-periods="testActivityPeriods"
-            @dates-change="onDatesChange"
-            @refresh="onRefresh" />
+        <div class="flex flex-col h-full min-h-0">
+            <div
+                v-if="showGoogleCalendarHint"
+                class="shrink-0 flex items-center gap-2 px-4 py-1.5 text-sm border-b border-default-background-separator text-text-secondary"
+                data-testid="google_calendar_hint">
+                <CalendarIcon class="w-4 h-4 shrink-0 text-icon-default" />
+                <span v-if="googleCalendarNeedsReconnect">
+                    Your Google Calendar could not be loaded.
+                </span>
+                <span v-else>See your meetings here and register them with one click.</span>
+                <a
+                    href="/google-calendar/connect"
+                    class="font-medium text-text-primary underline underline-offset-2 hover:text-primary">
+                    {{
+                        googleCalendarNeedsReconnect
+                            ? 'Reconnect Google Calendar'
+                            : 'Connect Google Calendar'
+                    }}
+                </a>
+                <button
+                    v-if="!googleCalendarNeedsReconnect"
+                    type="button"
+                    class="ml-auto p-1 rounded text-icon-default hover:text-text-primary"
+                    aria-label="Hide"
+                    @click="googleCalendarHintDismissed = true">
+                    <XMarkIcon class="w-4 h-4" />
+                </button>
+            </div>
+            <div class="flex-1 min-h-0">
+                <TimeEntryCalendar
+                    :time-entries="currentTimeEntries"
+                    :projects="projects"
+                    :tasks="tasks"
+                    :clients="clients"
+                    :tags="tags"
+                    :loading="timeEntriesLoading"
+                    :enable-estimated-time="isAllowedToPerformPremiumAction()"
+                    :currency="getOrganizationCurrencyString()"
+                    :can-create-project="canCreateProjects()"
+                    :initial-date="initialDate"
+                    :organization-billable-rate="organization?.billable_rate ?? null"
+                    :create-time-entry="createTimeEntry"
+                    :update-time-entry="updateTimeEntry"
+                    :delete-time-entry="deleteTimeEntry"
+                    :create-client="createClient"
+                    :create-project="createProject"
+                    :create-tag="createTag"
+                    :activity-periods="testActivityPeriods"
+                    :external-events="googleCalendarEvents"
+                    @dates-change="onDatesChange"
+                    @refresh="onRefresh" />
+            </div>
+        </div>
     </AppLayout>
 </template>

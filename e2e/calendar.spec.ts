@@ -2925,3 +2925,47 @@ test('test that calendar context menu can add a break that fills the gap between
     expect(body.data.start).toBe(gapStart);
     expect(body.data.end).toBe(gapEnd);
 });
+
+test('test that a Google Calendar meeting can be registered with one click', async ({ page }) => {
+    // Today 12:00-13:00 UTC: inside the visible hours in any test timezone
+    const start = new Date();
+    start.setUTCHours(12, 0, 0, 0);
+    const end = new Date(start.getTime() + 60 * 60 * 1000);
+    const toApi = (date: Date) => date.toISOString().replace(/\.\d{3}Z$/, 'Z');
+
+    await page.route('**/api/v1/users/me/google-calendar', (route) =>
+        route.fulfill({
+            json: { data: { enabled: true, connected: true, email: 'person@camjo.se' } },
+        })
+    );
+    await page.route('**/api/v1/users/me/google-calendar/events**', (route) =>
+        route.fulfill({
+            json: {
+                data: [
+                    {
+                        id: 'meeting-1',
+                        title: 'Kundmöte Google',
+                        start: toApi(start),
+                        end: toApi(end),
+                        html_link: null,
+                    },
+                ],
+            },
+        })
+    );
+
+    await goToCalendar(page);
+    const meeting = page
+        .getByTestId('calendar_external_event')
+        .filter({ hasText: 'Kundmöte Google' });
+    await meeting.first().scrollIntoViewIfNeeded();
+    await expect(meeting.first()).toBeVisible();
+
+    await meeting.first().click();
+
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole('textbox', { name: 'Description' })).toHaveValue(
+        'Kundmöte Google'
+    );
+});
