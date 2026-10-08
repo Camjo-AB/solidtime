@@ -110,8 +110,9 @@ async function createTag(tag: string): Promise<Tag | undefined> {
         </div>
         <div
             v-if="!isOnBreak && !isRunningInDifferentOrganization"
-            class="flex items-center gap-1 mt-1.5 -mx-1 min-w-0"
+            class="grid grid-cols-[3rem_minmax(0,1fr)] items-center gap-x-1 gap-y-0.5 mt-2 min-w-0"
             data-testid="sidebar_timer_project_controls">
+            <span class="text-2xs font-medium text-text-tertiary">Project</span>
             <TimeTrackerProjectTaskDropdown
                 v-model:project="currentTimeEntry.project_id"
                 v-model:task="currentTimeEntry.task_id"
@@ -119,7 +120,7 @@ async function createTag(tag: string): Promise<Tag | undefined> {
                 size="xs"
                 align="start"
                 trigger-label="Timer project selection"
-                class="min-w-0 max-w-[60%] text-xs"
+                class="min-w-0 w-full text-xs"
                 :projects="projects"
                 :tasks="tasks"
                 :clients="clients"
@@ -130,12 +131,13 @@ async function createTag(tag: string): Promise<Tag | undefined> {
                 :organization-billable-rate="organization?.billable_rate ?? null"
                 :enable-estimated-time="isAllowedToPerformPremiumAction()"
                 @changed="updateProject"></TimeTrackerProjectTaskDropdown>
+            <span class="text-2xs font-medium text-text-tertiary">Tags</span>
             <TimeTrackerTagDropdown
                 v-model="currentTimeEntry.tags"
                 show-label
                 trigger-label="Timer tag selection"
                 test-id="sidebar_tag_dropdown"
-                trigger-class="h-7 px-1.5 text-xs flex-1"
+                trigger-class="h-7 px-2 text-xs w-full"
                 :tags="tags"
                 :create-tag="createTag"
                 @changed="updateTimeEntry"></TimeTrackerTagDropdown>
