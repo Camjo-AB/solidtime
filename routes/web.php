@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Web\DashboardController;
+use App\Http\Controllers\Web\GoogleCalendarController;
 use App\Http\Controllers\Web\HomeController;
 use App\Http\Controllers\Web\OrganizationController;
 use App\Http\Controllers\Web\OrganizationInvitationController;
@@ -106,6 +107,11 @@ Route::middleware([
     Route::get('/user/profile', [UserProfileController::class, 'show'])->name('profile.show');
     Route::delete('/user/other-browser-sessions', [OtherBrowserSessionsController::class, 'destroy'])
         ->name('other-browser-sessions.destroy');
+
+    // Camjo: connect the user's Google Calendar (read-only)
+    Route::get('/google-calendar/connect', [GoogleCalendarController::class, 'connect'])->name('google-calendar.connect');
+    Route::get('/google-calendar/callback', [GoogleCalendarController::class, 'callback'])->name('google-calendar.callback');
+    Route::delete('/google-calendar', [GoogleCalendarController::class, 'disconnect'])->name('google-calendar.disconnect');
 });
 
 Route::get('/team-invitations/{invitation}', [OrganizationInvitationController::class, 'accept'])

@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\ChartController;
 use App\Http\Controllers\Api\V1\ClientController;
 use App\Http\Controllers\Api\V1\CurrencyController;
 use App\Http\Controllers\Api\V1\ExportController;
+use App\Http\Controllers\Api\V1\GoogleCalendarController;
 use App\Http\Controllers\Api\V1\ImportController;
 use App\Http\Controllers\Api\V1\InvitationController;
 use App\Http\Controllers\Api\V1\MemberController;
@@ -68,6 +69,12 @@ Route::prefix('v1')->name('v1.')->group(static function (): void {
             Route::post('/users/{user}/resend-email-verification', [UserController::class, 'resendEmailVerification'])->name('resend-email-verification');
             Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('destroy');
             Route::post('/users/{user}/reset-pending-email', [UserController::class, 'resetPendingEmail'])->name('reset-pending-email');
+        });
+
+        // Google Calendar routes (Camjo)
+        Route::name('google-calendar.')->group(static function (): void {
+            Route::get('/users/me/google-calendar', [GoogleCalendarController::class, 'show'])->name('show');
+            Route::get('/users/me/google-calendar/events', [GoogleCalendarController::class, 'events'])->name('events');
         });
 
         // Api token routes
