@@ -18,7 +18,7 @@ class GoogleCalendarEventsRequest extends BaseFormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, array<string|ValidationRule>>
+     * @return array<string, array<string|ValidationRule|\Closure>>
      */
     public function rules(): array
     {
