@@ -1,13 +1,17 @@
 <script setup lang="ts">
 import FullCalendarEventContent from './FullCalendarEventContent.vue';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '..';
-import type { DayEvent, ActivityBox } from './calendarTypes';
+import type { DayEvent, ActivityBox, ExternalEventBox } from './calendarTypes';
 import type { WindowActivityInPeriod } from './activityTypes';
+import { CalendarIcon } from '@heroicons/vue/20/solid';
 
 const props = defineProps<{
     dayStr: string;
     totalGridHeight: number;
     hasActivityStatus: boolean;
+
+    // Read-only events of an external calendar (e.g. Google Calendar), drawn behind time entries
+    externalEventBoxes?: ExternalEventBox[];
 
     // Events
     dayEvents: DayEvent[];
@@ -68,7 +72,23 @@ const emit = defineEmits<{
         edge: 'start' | 'end'
     ): void;
     (e: 'activity-pointerdown', event: PointerEvent): void;
+    (e: 'external-event-click', box: ExternalEventBox): void;
 }>();
+
+function isExternalEventCovered(box: ExternalEventBox): boolean {
+    // Already registered: a time entry covers most of the meeting
+    return props.dayEvents.some((de) => {
+        const overlap =
+            Math.min(de.top + de.height, box.top + box.height) - Math.max(de.top, box.top);
+        return overlap >= box.height * 0.8;
+    });
+}
+
+function formatExternalEventTime(box: ExternalEventBox): string {
+    const format = (iso: string) =>
+        new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return `${format(box.event.start)} – ${format(box.event.end)}`;
+}
 </script>
 
 <template>
@@ -86,6 +106,27 @@ const emit = defineEmits<{
                 'fc-events-inset': hasActivityStatus && !isDayView,
                 'fc-events-inset-expanded': hasActivityStatus && isDayView,
             }">
+            <button
+                v-for="box in externalEventBoxes ?? []"
+                :key="'external-' + box.event.id"
+                type="button"
+                class="fc-external-event absolute inset-x-0 pointer-events-auto rounded-sm border border-dashed text-left text-2xs leading-tight px-1 py-0.5 overflow-hidden transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                :class="
+                    isExternalEventCovered(box)
+                        ? 'opacity-40 border-border-secondary'
+                        : 'border-border-tertiary bg-card-background hover:border-primary'
+                "
+                :style="{ top: box.top + 'px', height: box.height + 'px' }"
+                :title="`${box.event.title} (${formatExternalEventTime(box)}) – click to register`"
+                :aria-label="`Register calendar event ${box.event.title}`"
+                data-testid="calendar_external_event"
+                @pointerdown.stop
+                @click="emit('external-event-click', box)">
+                <span class="flex items-center gap-1 font-medium text-text-secondary min-w-0">
+                    <CalendarIcon class="w-3 h-3 shrink-0" />
+                    <span class="truncate">{{ box.event.title }}</span>
+                </span>
+            </button>
             <div
                 v-for="dayEvent in dayEvents"
                 :key="dayEvent.event.id"

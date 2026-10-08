@@ -38,7 +38,14 @@ import {
 } from '@heroicons/vue/20/solid';
 import { Coffee } from '@lucide/vue';
 import type { ActivityPeriod } from './activityTypes';
-import { SLOT_HEIGHT, TIME_AXIS_WIDTH, type DayEvent } from './calendarTypes';
+import {
+    SLOT_HEIGHT,
+    TIME_AXIS_WIDTH,
+    type DayEvent,
+    type ExternalCalendarEvent,
+    type ExternalEventBox,
+} from './calendarTypes';
+import { useExternalEventBoxes } from './useExternalEventBoxes';
 import { useCalendarGrid } from './useCalendarGrid';
 import { useCalendarNavigation } from './useCalendarNavigation';
 import { useCalendarEvents } from './useCalendarEvents';
@@ -71,6 +78,8 @@ const props = defineProps<{
     clients: Client[];
     tags: Tag[];
     activityPeriods?: ActivityPeriod[];
+    // Read-only meetings of a connected calendar; clicking one creates a time entry from it
+    externalEvents?: ExternalCalendarEvent[];
     loading?: boolean;
 
     enableEstimatedTime: boolean;
@@ -192,6 +201,22 @@ const {
     minutesToPixels,
 });
 
+const { externalEventBoxesForDay } = useExternalEventBoxes({
+    externalEvents: () => props.externalEvents,
+    viewDays,
+    calendarSettings,
+    minutesToPixels,
+});
+
+// Clicking a calendar meeting opens "Create time entry" with its title and times
+const newEventDescription = ref<string | undefined>(undefined);
+function onExternalEventClick(box: ExternalEventBox) {
+    newEventStart.value = getLocalizedDayJs(box.event.start);
+    newEventEnd.value = getLocalizedDayJs(box.event.end);
+    newEventDescription.value = box.event.title;
+    showCreateTimeEntryModal.value = true;
+}
+
 const { isDragging, dragEventId, dragPreviewsByDay, onEventPointerDown } = useEventDrag({
     calendarSettings,
     viewDays,
@@ -296,6 +321,7 @@ watch(showCreateTimeEntryModal, (value) => {
     if (!value) {
         newEventStart.value = null;
         newEventEnd.value = null;
+        newEventDescription.value = undefined;
         clearSelection();
         emit('refresh');
     }
@@ -488,7 +514,8 @@ function getEventDurationSeconds(dayEvent: DayEvent, dayStr: string): number {
             :tasks="tasks"
             :clients="clients"
             :start="newEventStart ? newEventStart.toISOString() : undefined"
-            :end="newEventEnd ? newEventEnd.toISOString() : undefined" />
+            :end="newEventEnd ? newEventEnd.toISOString() : undefined"
+            :initial-description="newEventDescription" />
 
         <BreakCreateModal
             v-model:show="showCreateBreakModal"
@@ -690,6 +717,10 @@ function getEventDurationSeconds(dayEvent: DayEvent, dayStr: string): number {
                                             :selection-height="selectionHeight"
                                             :selection-end-top="selectionEndTop"
                                             :selection-end-height="selectionEndHeight"
+                                            :external-event-boxes="
+                                                externalEventBoxesForDay(day.format('YYYY-MM-DD'))
+                                            "
+                                            @external-event-click="onExternalEventClick"
                                             @activity-pointerdown="guardedSlotPointerDown"
                                             @event-pointerdown="
                                                 (e, dayEvent) =>

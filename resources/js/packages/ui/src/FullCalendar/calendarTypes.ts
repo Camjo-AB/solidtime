@@ -25,6 +25,24 @@ export interface CalendarEvent {
     dayEnd: Dayjs;
 }
 
+/** A read-only event from an external calendar (e.g. Google Calendar), shown next to time entries. */
+export interface ExternalCalendarEvent {
+    id: string;
+    title: string;
+    /** ISO 8601, UTC */
+    start: string;
+    /** ISO 8601, UTC */
+    end: string;
+    htmlLink?: string | null;
+}
+
+export interface ExternalEventBox {
+    dateStr: string;
+    top: number;
+    height: number;
+    event: ExternalCalendarEvent;
+}
+
 export interface DayEvent {
     event: CalendarEvent;
     top: number;

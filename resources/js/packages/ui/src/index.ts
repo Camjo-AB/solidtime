@@ -19,6 +19,7 @@ export type {
 export type { FieldVariants } from './field/index';
 export type { CalendarSettings } from './FullCalendar/calendarSettings';
 export type { ActivityPeriod } from './FullCalendar/activityTypes';
+export type { ExternalCalendarEvent } from './FullCalendar/calendarTypes';
 export { cn } from './utils/cn';
 export { useCssVariable } from './utils/useCssVariable';
 

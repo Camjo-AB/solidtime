@@ -37,6 +37,8 @@ const props = defineProps<{
     clients: Client[];
     start?: string;
     end?: string;
+    /** Prefills the description, e.g. with the title of a calendar meeting. */
+    initialDescription?: string;
     currency: string;
     organizationBillableRate: number | null;
     canCreateProject: boolean;
@@ -105,6 +107,23 @@ const localEnd = ref(getLocalizedDayJs(timeEntryDefaultValues.end).format());
 watch(localStart, (value) => {
     timeEntry.value.start = getLocalizedDayJs(value).utc().format();
 });
+
+// A prefilled description (e.g. a meeting title) must not stick around for the next, plain create.
+let descriptionWasPrefilled = false;
+watch(
+    show,
+    (isShown) => {
+        if (!isShown) return;
+        if (props.initialDescription !== undefined) {
+            timeEntry.value.description = props.initialDescription;
+            descriptionWasPrefilled = true;
+        } else if (descriptionWasPrefilled) {
+            timeEntry.value.description = '';
+            descriptionWasPrefilled = false;
+        }
+    },
+    { immediate: true }
+);
 
 watch(localEnd, (value) => {
     timeEntry.value.end = getLocalizedDayJs(value).utc().format();
