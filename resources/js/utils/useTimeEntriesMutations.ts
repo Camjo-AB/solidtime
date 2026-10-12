@@ -88,14 +88,15 @@ export function useTimeEntriesMutations() {
                     'Failed to update time entries'
                 );
                 // The endpoint applies the changeset per entry and skips entries it can't
-                // apply it to (e.g. breaks with a project/tags/billable change) — a 200
-                // with their ids in `error`. Surface that instead of claiming success.
+                // apply it to (e.g. breaks with a project/tags/billable change, or a project
+                // without a tag when the organization requires one) — a 200 with their ids
+                // in `error`. Surface that instead of claiming success.
                 const skippedCount = response?.error.length ?? 0;
                 if (skippedCount > 0) {
                     addNotification(
                         'error',
                         `${skippedCount} of ${ids.length} time entries ${skippedCount === 1 ? 'was' : 'were'} skipped`,
-                        'No changes were applied to the skipped entries — break entries can not have a project or tags, or be billable.'
+                        'No changes were applied to the skipped entries — break entries can not have a project or tags, or be billable, and entries with a project need a tag if your organization requires one.'
                     );
                 } else {
                     addNotification('success', 'Time entries updated successfully');

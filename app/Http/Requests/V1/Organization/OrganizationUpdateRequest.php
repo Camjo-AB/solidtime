@@ -54,6 +54,9 @@ class OrganizationUpdateRequest extends BaseFormRequest
             'breaks_enabled' => [
                 'boolean',
             ],
+            'require_tag_with_project' => [
+                'boolean',
+            ],
             'number_format' => [
                 Rule::enum(NumberFormat::class),
             ],
@@ -132,5 +135,10 @@ class OrganizationUpdateRequest extends BaseFormRequest
     public function getBreaksEnabled(): ?bool
     {
         return $this->has('breaks_enabled') ? $this->boolean('breaks_enabled') : null;
+    }
+
+    public function getRequireTagWithProject(): ?bool
+    {
+        return $this->has('require_tag_with_project') ? $this->boolean('require_tag_with_project') : null;
     }
 }

@@ -22,6 +22,11 @@ export type { ActivityPeriod } from './FullCalendar/activityTypes';
 export type { ExternalCalendarEvent } from './FullCalendar/calendarTypes';
 export { cn } from './utils/cn';
 export { useCssVariable } from './utils/useCssVariable';
+export {
+    TAG_REQUIRED_WITH_PROJECT_MESSAGE,
+    isMissingRequiredTag,
+    useRequireTagWithProject,
+} from './utils/requireTagWithProject';
 
 import Badge from './Badge.vue';
 import Button from './Buttons/Button.vue';

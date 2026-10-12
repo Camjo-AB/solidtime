@@ -201,6 +201,7 @@ async function startTimeEntryFromExisting(entry: TimeEntry) {
         end: null,
         billable: entry.billable,
         description: entry.description,
+        tags: entry.tags,
     });
     startLiveTimer();
     updateFilteredTimeEntries();

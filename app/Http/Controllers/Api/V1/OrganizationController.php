@@ -81,6 +81,9 @@ class OrganizationController extends Controller
         if ($request->getBreaksEnabled() !== null) {
             $organization->breaks_enabled = $request->getBreaksEnabled();
         }
+        if ($request->getRequireTagWithProject() !== null) {
+            $organization->require_tag_with_project = $request->getRequireTagWithProject();
+        }
         $hasBillableRate = $request->has('billable_rate');
         if ($hasBillableRate) {
             $oldBillableRate = $organization->billable_rate;

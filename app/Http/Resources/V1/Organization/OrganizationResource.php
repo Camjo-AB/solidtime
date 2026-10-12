@@ -59,6 +59,8 @@ class OrganizationResource extends BaseResource
             'prevent_overlapping_time_entries' => $this->resource->prevent_overlapping_time_entries,
             /** @var bool $breaks_enabled Whether members of the organization can track breaks */
             'breaks_enabled' => $this->resource->breaks_enabled,
+            /** @var bool $require_tag_with_project Whether finished time entries with a project must have at least one tag */
+            'require_tag_with_project' => $this->resource->require_tag_with_project,
             /** @var string $currency Currency code (ISO 4217) */
             'currency' => $this->resource->currency,
             /** @var string $currency_symbol Currency symbol */

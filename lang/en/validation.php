@@ -201,6 +201,7 @@ return [
     'color' => 'The :attribute field must be a valid color.',
     'currency' => 'The :attribute field must be a valid currency code (ISO 4217).',
     'organization' => 'The :attribute does not exist.',
+    'tag_required_with_project' => 'A tag is required when a project is selected.',
     'task_belongs_to_project' => 'The :attribute is not part of the given project.',
     'project_name_already_exists' => 'A project with the same name and client already exists in the organization.',
     'overlapping_time_entry' => 'Overlapping time entries are not allowed.',

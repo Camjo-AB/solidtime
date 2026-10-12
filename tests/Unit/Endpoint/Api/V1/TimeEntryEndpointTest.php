@@ -5687,4 +5687,435 @@ class TimeEntryEndpointTest extends ApiEndpointTestAbstract
             'billable_rate' => null,
         ]);
     }
+
+    public function test_store_endpoint_fails_if_finished_time_entry_has_project_but_no_tag_and_organization_requires_tag(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'time-entries:create:own',
+            'projects:view:all',
+        ]);
+        $data->organization->require_tag_with_project = true;
+        $data->organization->save();
+        $project = Project::factory()->forOrganization($data->organization)->create();
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->postJson(route('api.v1.time-entries.store', [$data->organization->getKey()]), [
+            'billable' => false,
+            'start' => Carbon::now()->subHour()->toIso8601ZuluString(),
+            'end' => Carbon::now()->toIso8601ZuluString(),
+            'member_id' => $data->member->getKey(),
+            'project_id' => $project->getKey(),
+            'tags' => [],
+        ]);
+
+        // Assert
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['tags' => 'A tag is required when a project is selected.']);
+        $this->assertDatabaseCount(TimeEntry::class, 0);
+    }
+
+    public function test_store_endpoint_creates_finished_time_entry_with_project_and_tag_if_organization_requires_tag(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'time-entries:create:own',
+            'projects:view:all',
+        ]);
+        $data->organization->require_tag_with_project = true;
+        $data->organization->save();
+        $project = Project::factory()->forOrganization($data->organization)->create();
+        $tag = Tag::factory()->forOrganization($data->organization)->create();
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->postJson(route('api.v1.time-entries.store', [$data->organization->getKey()]), [
+            'billable' => false,
+            'start' => Carbon::now()->subHour()->toIso8601ZuluString(),
+            'end' => Carbon::now()->toIso8601ZuluString(),
+            'member_id' => $data->member->getKey(),
+            'project_id' => $project->getKey(),
+            'tags' => [$tag->getKey()],
+        ]);
+
+        // Assert
+        $response->assertStatus(201);
+        $response->assertJsonPath('data.tags', [$tag->getKey()]);
+    }
+
+    public function test_store_endpoint_creates_finished_time_entry_without_project_and_tag_if_organization_requires_tag(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'time-entries:create:own',
+        ]);
+        $data->organization->require_tag_with_project = true;
+        $data->organization->save();
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->postJson(route('api.v1.time-entries.store', [$data->organization->getKey()]), [
+            'billable' => false,
+            'start' => Carbon::now()->subHour()->toIso8601ZuluString(),
+            'end' => Carbon::now()->toIso8601ZuluString(),
+            'member_id' => $data->member->getKey(),
+        ]);
+
+        // Assert
+        $response->assertStatus(201);
+    }
+
+    public function test_store_endpoint_starts_running_time_entry_with_project_but_no_tag_if_organization_requires_tag(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'time-entries:create:own',
+            'projects:view:all',
+        ]);
+        $data->organization->require_tag_with_project = true;
+        $data->organization->save();
+        $project = Project::factory()->forOrganization($data->organization)->create();
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->postJson(route('api.v1.time-entries.store', [$data->organization->getKey()]), [
+            'billable' => false,
+            'start' => Carbon::now()->subHour()->toIso8601ZuluString(),
+            'member_id' => $data->member->getKey(),
+            'project_id' => $project->getKey(),
+        ]);
+
+        // Assert
+        $response->assertStatus(201);
+        $response->assertJsonPath('data.end', null);
+    }
+
+    public function test_store_endpoint_creates_finished_time_entry_with_project_but_no_tag_if_organization_does_not_require_tag(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'time-entries:create:own',
+            'projects:view:all',
+        ]);
+        $project = Project::factory()->forOrganization($data->organization)->create();
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->postJson(route('api.v1.time-entries.store', [$data->organization->getKey()]), [
+            'billable' => false,
+            'start' => Carbon::now()->subHour()->toIso8601ZuluString(),
+            'end' => Carbon::now()->toIso8601ZuluString(),
+            'member_id' => $data->member->getKey(),
+            'project_id' => $project->getKey(),
+        ]);
+
+        // Assert
+        $response->assertStatus(201);
+    }
+
+    public function test_store_endpoint_creates_break_if_organization_requires_tag(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'time-entries:create:own',
+        ]);
+        $data->organization->breaks_enabled = true;
+        $data->organization->require_tag_with_project = true;
+        $data->organization->save();
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->postJson(route('api.v1.time-entries.store', [$data->organization->getKey()]), [
+            'billable' => false,
+            'type' => 'break',
+            'start' => Carbon::now()->subHour()->toIso8601ZuluString(),
+            'end' => Carbon::now()->toIso8601ZuluString(),
+            'member_id' => $data->member->getKey(),
+        ]);
+
+        // Assert
+        $response->assertStatus(201);
+    }
+
+    public function test_update_endpoint_fails_to_stop_running_time_entry_with_project_but_no_tag_if_organization_requires_tag(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'time-entries:update:own',
+        ]);
+        $data->organization->require_tag_with_project = true;
+        $data->organization->save();
+        $project = Project::factory()->forOrganization($data->organization)->create();
+        $timeEntry = TimeEntry::factory()
+            ->forOrganization($data->organization)
+            ->forMember($data->member)
+            ->forProject($project)
+            ->active()
+            ->create();
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->putJson(route('api.v1.time-entries.update', [$data->organization->getKey(), $timeEntry->getKey()]), [
+            'end' => Carbon::now()->toIso8601ZuluString(),
+        ]);
+
+        // Assert
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['tags' => 'A tag is required when a project is selected.']);
+        $this->assertDatabaseHas(TimeEntry::class, [
+            'id' => $timeEntry->getKey(),
+            'end' => null,
+        ]);
+    }
+
+    public function test_update_endpoint_stops_running_time_entry_with_project_and_tag_if_organization_requires_tag(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'time-entries:update:own',
+        ]);
+        $data->organization->require_tag_with_project = true;
+        $data->organization->save();
+        $project = Project::factory()->forOrganization($data->organization)->create();
+        $timeEntry = TimeEntry::factory()
+            ->forOrganization($data->organization)
+            ->forMember($data->member)
+            ->forProject($project)
+            ->withTags($data->organization)
+            ->active()
+            ->create();
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->putJson(route('api.v1.time-entries.update', [$data->organization->getKey(), $timeEntry->getKey()]), [
+            'end' => Carbon::now()->toIso8601ZuluString(),
+        ]);
+
+        // Assert
+        $response->assertStatus(200);
+        $this->assertNotNull($response->json('data.end'));
+    }
+
+    public function test_update_endpoint_allows_setting_project_on_running_time_entry_without_tag_if_organization_requires_tag(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'time-entries:update:own',
+            'projects:view:all',
+        ]);
+        $data->organization->require_tag_with_project = true;
+        $data->organization->save();
+        $project = Project::factory()->forOrganization($data->organization)->create();
+        $timeEntry = TimeEntry::factory()
+            ->forOrganization($data->organization)
+            ->forMember($data->member)
+            ->active()
+            ->create();
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->putJson(route('api.v1.time-entries.update', [$data->organization->getKey(), $timeEntry->getKey()]), [
+            'project_id' => $project->getKey(),
+        ]);
+
+        // Assert
+        $response->assertStatus(200);
+        $response->assertJsonPath('data.project_id', $project->getKey());
+    }
+
+    public function test_update_endpoint_allows_editing_description_of_older_time_entry_with_project_but_no_tag_if_organization_requires_tag(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'time-entries:update:own',
+            'projects:view:all',
+        ]);
+        $data->organization->require_tag_with_project = true;
+        $data->organization->save();
+        $project = Project::factory()->forOrganization($data->organization)->create();
+        $timeEntry = TimeEntry::factory()
+            ->forOrganization($data->organization)
+            ->forMember($data->member)
+            ->forProject($project)
+            ->create();
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->putJson(route('api.v1.time-entries.update', [$data->organization->getKey(), $timeEntry->getKey()]), [
+            'description' => 'Updated description',
+            'project_id' => $project->getKey(),
+            'tags' => [],
+        ]);
+
+        // Assert
+        $response->assertStatus(200);
+        $response->assertJsonPath('data.description', 'Updated description');
+    }
+
+    public function test_update_endpoint_fails_if_project_is_added_to_finished_time_entry_without_tag_if_organization_requires_tag(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'time-entries:update:own',
+            'projects:view:all',
+        ]);
+        $data->organization->require_tag_with_project = true;
+        $data->organization->save();
+        $project = Project::factory()->forOrganization($data->organization)->create();
+        $timeEntry = TimeEntry::factory()
+            ->forOrganization($data->organization)
+            ->forMember($data->member)
+            ->create();
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->putJson(route('api.v1.time-entries.update', [$data->organization->getKey(), $timeEntry->getKey()]), [
+            'project_id' => $project->getKey(),
+        ]);
+
+        // Assert
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['tags' => 'A tag is required when a project is selected.']);
+        $this->assertDatabaseHas(TimeEntry::class, [
+            'id' => $timeEntry->getKey(),
+            'project_id' => null,
+        ]);
+    }
+
+    public function test_update_endpoint_fails_if_last_tag_is_removed_from_finished_time_entry_with_project_if_organization_requires_tag(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'time-entries:update:own',
+        ]);
+        $data->organization->require_tag_with_project = true;
+        $data->organization->save();
+        $project = Project::factory()->forOrganization($data->organization)->create();
+        $timeEntry = TimeEntry::factory()
+            ->forOrganization($data->organization)
+            ->forMember($data->member)
+            ->forProject($project)
+            ->withTags($data->organization)
+            ->create();
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->putJson(route('api.v1.time-entries.update', [$data->organization->getKey(), $timeEntry->getKey()]), [
+            'tags' => [],
+        ]);
+
+        // Assert
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['tags' => 'A tag is required when a project is selected.']);
+    }
+
+    public function test_update_endpoint_allows_removing_project_and_tags_from_finished_time_entry_if_organization_requires_tag(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'time-entries:update:own',
+        ]);
+        $data->organization->require_tag_with_project = true;
+        $data->organization->save();
+        $project = Project::factory()->forOrganization($data->organization)->create();
+        $timeEntry = TimeEntry::factory()
+            ->forOrganization($data->organization)
+            ->forMember($data->member)
+            ->forProject($project)
+            ->withTags($data->organization)
+            ->create();
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->putJson(route('api.v1.time-entries.update', [$data->organization->getKey(), $timeEntry->getKey()]), [
+            'project_id' => null,
+            'tags' => [],
+        ]);
+
+        // Assert
+        $response->assertStatus(200);
+        $response->assertJsonPath('data.project_id', null);
+    }
+
+    public function test_update_multiple_endpoint_rejects_project_change_for_finished_time_entries_without_tag_if_organization_requires_tag(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'time-entries:update:own',
+            'projects:view:all',
+        ]);
+        $data->organization->require_tag_with_project = true;
+        $data->organization->save();
+        $project = Project::factory()->forOrganization($data->organization)->create();
+        $timeEntryWithTags = TimeEntry::factory()
+            ->forOrganization($data->organization)
+            ->forMember($data->member)
+            ->withTags($data->organization)
+            ->create();
+        $timeEntryWithoutTags = TimeEntry::factory()
+            ->forOrganization($data->organization)
+            ->forMember($data->member)
+            ->create();
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->patchJson(route('api.v1.time-entries.update-multiple', [$data->organization->getKey()]), [
+            'ids' => [
+                $timeEntryWithTags->getKey(),
+                $timeEntryWithoutTags->getKey(),
+            ],
+            'changes' => [
+                'project_id' => $project->getKey(),
+            ],
+        ]);
+
+        // Assert
+        $response->assertStatus(200);
+        $this->assertEqualsCanonicalizing([$timeEntryWithTags->getKey()], $response->json('success'));
+        $this->assertEqualsCanonicalizing([$timeEntryWithoutTags->getKey()], $response->json('error'));
+        $this->assertDatabaseHas(TimeEntry::class, [
+            'id' => $timeEntryWithoutTags->getKey(),
+            'project_id' => null,
+        ]);
+    }
+
+    public function test_update_multiple_endpoint_rejects_removing_all_tags_from_finished_time_entries_with_project_if_organization_requires_tag(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'time-entries:update:own',
+        ]);
+        $data->organization->require_tag_with_project = true;
+        $data->organization->save();
+        $project = Project::factory()->forOrganization($data->organization)->create();
+        $timeEntryWithProject = TimeEntry::factory()
+            ->forOrganization($data->organization)
+            ->forMember($data->member)
+            ->forProject($project)
+            ->withTags($data->organization)
+            ->create();
+        $timeEntryWithoutProject = TimeEntry::factory()
+            ->forOrganization($data->organization)
+            ->forMember($data->member)
+            ->withTags($data->organization)
+            ->create();
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->patchJson(route('api.v1.time-entries.update-multiple', [$data->organization->getKey()]), [
+            'ids' => [
+                $timeEntryWithProject->getKey(),
+                $timeEntryWithoutProject->getKey(),
+            ],
+            'changes' => [
+                'tags' => [],
+            ],
+        ]);
+
+        // Assert
+        $response->assertStatus(200);
+        $this->assertEqualsCanonicalizing([$timeEntryWithoutProject->getKey()], $response->json('success'));
+        $this->assertEqualsCanonicalizing([$timeEntryWithProject->getKey()], $response->json('error'));
+    }
 }

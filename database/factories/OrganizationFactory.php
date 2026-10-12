@@ -34,6 +34,7 @@ class OrganizationFactory extends Factory
             'personal_team' => true,
             'employees_can_see_billable_rates' => false,
             'breaks_enabled' => false,
+            'require_tag_with_project' => false,
             'number_format' => $this->faker->randomElement(NumberFormat::values()),
             'currency_format' => $this->faker->randomElement(CurrencyFormat::values()),
             'date_format' => $this->faker->randomElement(DateFormat::values()),

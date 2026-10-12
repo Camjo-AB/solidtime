@@ -12,6 +12,10 @@ import {
 import { useLocalStorage } from '@vueuse/core';
 import { useNotificationsStore } from '@/utils/notification';
 import { useQueryClient } from '@tanstack/vue-query';
+import {
+    isMissingRequiredTag,
+    TAG_REQUIRED_WITH_PROJECT_MESSAGE,
+} from '@/packages/ui/src/utils/requireTagWithProject';
 
 dayjs.extend(utc);
 
@@ -55,7 +59,7 @@ export function getLastWorkTimeEntry(
 
 export const useCurrentTimeEntryStore = defineStore('currentTimeEntry', () => {
     const currentTimeEntry = ref<TimeEntry>({ ...emptyTimeEntry });
-    const { handleApiRequestNotifications } = useNotificationsStore();
+    const { handleApiRequestNotifications, addNotification } = useNotificationsStore();
     const queryClient = useQueryClient();
     useLocalStorage('solidtime/current-time-entry', currentTimeEntry, {
         deep: true,
@@ -107,6 +111,47 @@ export const useCurrentTimeEntryStore = defineStore('currentTimeEntry', () => {
             throw new Error(
                 'Failed to fetch current time entry because organization ID is missing.'
             );
+        }
+    }
+
+    async function organizationRequiresTagWithProject(): Promise<boolean> {
+        const organizationId = getCurrentOrganizationId();
+        if (!organizationId) {
+            return false;
+        }
+        try {
+            const response = await queryClient.fetchQuery({
+                queryKey: ['organization', organizationId],
+                queryFn: () =>
+                    api.getOrganization({
+                        params: {
+                            organization: organizationId,
+                        },
+                    }),
+                staleTime: 1000 * 30,
+            });
+            return response.data.require_tag_with_project;
+        } catch {
+            // The API rejects the stop anyway if a tag is required
+            return false;
+        }
+    }
+
+    /**
+     * Throws (after showing a notification) if the running entry has a project but no tag
+     * while the organization requires one, so the timer keeps running until a tag is added.
+     */
+    async function assertCanStopWithoutMissingTag() {
+        if (
+            isActive.value &&
+            isMissingRequiredTag(currentTimeEntry.value, await organizationRequiresTagWithProject())
+        ) {
+            addNotification(
+                'error',
+                'Add a tag before stopping the timer',
+                TAG_REQUIRED_WITH_PROJECT_MESSAGE
+            );
+            throw new Error('A tag is required to stop the timer.');
         }
     }
 
@@ -180,6 +225,7 @@ export const useCurrentTimeEntryStore = defineStore('currentTimeEntry', () => {
             throw new Error('Failed to start break because organization ID is missing.');
         }
         // One timestamp for both the work end and the break start, so the entries touch exactly
+        await assertCanStopWithoutMissingTag();
         const switchTime = dayjs().utc().format();
         if (isActive.value && currentTimeEntry.value.type !== 'break') {
             await stopTimer(switchTime);
@@ -298,6 +344,7 @@ export const useCurrentTimeEntryStore = defineStore('currentTimeEntry', () => {
             startLiveTimer();
             await startTimer();
         } else {
+            await assertCanStopWithoutMissingTag();
             stopLiveTimer();
             await stopTimer();
         }

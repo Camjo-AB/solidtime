@@ -21,6 +21,12 @@ import { Button } from '@/packages/ui/src/Buttons';
 import TimeRangeFields from '@/packages/ui/src/TimeEntry/TimeRangeFields.vue';
 import type { Tag, Task } from '@/packages/api/src';
 import { selectedTagNames, tagLabel } from '@/packages/ui/src/utils/tags';
+import {
+    isMissingRequiredTag,
+    TAG_REQUIRED_WITH_PROJECT_MESSAGE,
+    useRequireTagWithProject,
+} from '@/packages/ui/src/utils/requireTagWithProject';
+import FieldError from '@/packages/ui/src/field/FieldError.vue';
 
 const show = defineModel('show', { default: false });
 const saving = ref(false);
@@ -129,7 +135,16 @@ watch(localEnd, (value) => {
     timeEntry.value.end = getLocalizedDayJs(value).utc().format();
 });
 
+const requireTagWithProject = useRequireTagWithProject();
+const tagMissing = computed(() =>
+    isMissingRequiredTag(timeEntry.value, requireTagWithProject.value)
+);
+
 async function submit() {
+    // Enter in the description and the dialog submit bypass the disabled button
+    if (tagMissing.value) {
+        return;
+    }
     await props.createTimeEntry({ ...timeEntry.value });
     timeEntry.value = { ...timeEntryDefaultValues };
     localStart.value = getLocalizedDayJs(timeEntryDefaultValues.start).format();
@@ -193,7 +208,12 @@ const tagTitle = computed(() => selectedTagNames(timeEntry.value.tags, props.tag
                         :tags="tags"
                         :show-no-tag-option="false">
                         <template #trigger>
-                            <Button variant="input" class="min-w-0" :title="tagTitle || undefined">
+                            <Button
+                                variant="input"
+                                class="min-w-0"
+                                :class="{ 'border-destructive': tagMissing }"
+                                :aria-invalid="tagMissing || undefined"
+                                :title="tagTitle || undefined">
                                 <TagIcon class="h-4 shrink-0 text-icon-default" />
                                 <span class="max-w-48 truncate">{{
                                     tagButtonLabel || 'Tags'
@@ -215,6 +235,9 @@ const tagTitle = computed(() => selectedTagNames(timeEntry.value.tags, props.tag
                     </Select>
                 </div>
             </div>
+            <FieldError v-if="tagMissing" class="pt-2">{{
+                TAG_REQUIRED_WITH_PROJECT_MESSAGE
+            }}</FieldError>
             <TimeRangeFields
                 v-model:start="localStart"
                 v-model:end="localEnd"
@@ -226,8 +249,8 @@ const tagTitle = computed(() => selectedTagNames(timeEntry.value.tags, props.tag
             <PrimaryButton
                 tabindex="2"
                 class="ms-3"
-                :class="{ 'opacity-25': saving }"
-                :disabled="saving"
+                :class="{ 'opacity-25': saving || tagMissing }"
+                :disabled="saving || tagMissing"
                 @click="submit">
                 Create Time Entry
             </PrimaryButton>

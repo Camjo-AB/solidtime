@@ -6,6 +6,11 @@ import { type User } from '@/types/models';
 import { computed, onMounted, watch } from 'vue';
 import { getDayJsInstance } from '@/packages/ui/src/utils/time';
 import { useBreaksEnabled } from '@/packages/ui/src/utils/useBreaksEnabled';
+import {
+    isMissingRequiredTag,
+    TAG_REQUIRED_WITH_PROJECT_MESSAGE,
+    useRequireTagWithProject,
+} from '@/packages/ui/src/utils/requireTagWithProject';
 
 import { getLastWorkTimeEntry, useCurrentTimeEntryStore } from '@/utils/useCurrentTimeEntry';
 import { storeToRefs } from 'pinia';
@@ -49,6 +54,7 @@ const dayjs = getDayJsInstance();
 
 const { organization } = useOrganizationQuery(getCurrentOrganizationId()!);
 const breaksEnabled = useBreaksEnabled(organization);
+const requireTagWithProject = useRequireTagWithProject(organization);
 
 const currentTimeEntryStore = useCurrentTimeEntryStore();
 const { currentTimeEntry, isActive, isOnBreak, now } = storeToRefs(currentTimeEntryStore);
@@ -135,12 +141,20 @@ async function resumePreviousWorkAfterBreak() {
 }
 
 async function createTimeEntryFromCurrentEntry() {
+    if (isMissingRequiredTag(currentTimeEntry.value, requireTagWithProject.value)) {
+        addNotification(
+            'error',
+            'Add a tag before saving the time entry',
+            TAG_REQUIRED_WITH_PROJECT_MESSAGE
+        );
+        return;
+    }
     const { start, end, description, project_id, task_id, billable, tags } = currentTimeEntry.value;
     await createTimeEntry({ start, end, description, project_id, task_id, billable, tags });
     currentTimeEntryStore.$reset();
 }
 
-const { handleApiRequestNotifications } = useNotificationsStore();
+const { handleApiRequestNotifications, addNotification } = useNotificationsStore();
 
 async function discardCurrentTimeEntry() {
     if (currentTimeEntry.value.id) {

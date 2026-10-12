@@ -18,10 +18,12 @@ const form = ref<{
     prevent_overlapping_time_entries: boolean;
     employees_can_manage_tasks: boolean;
     breaks_enabled: boolean;
+    require_tag_with_project: boolean;
 }>({
     prevent_overlapping_time_entries: false,
     employees_can_manage_tasks: false,
     breaks_enabled: false,
+    require_tag_with_project: false,
 });
 
 onMounted(async () => {
@@ -29,6 +31,7 @@ onMounted(async () => {
         organization.value?.prevent_overlapping_time_entries ?? false;
     form.value.employees_can_manage_tasks = organization.value?.employees_can_manage_tasks ?? false;
     form.value.breaks_enabled = organization.value?.breaks_enabled ?? false;
+    form.value.require_tag_with_project = organization.value?.require_tag_with_project ?? false;
 });
 
 const mutation = useMutation({
@@ -43,6 +46,7 @@ async function submit() {
         prevent_overlapping_time_entries: form.value.prevent_overlapping_time_entries,
         employees_can_manage_tasks: form.value.employees_can_manage_tasks,
         breaks_enabled: form.value.breaks_enabled,
+        require_tag_with_project: form.value.require_tag_with_project,
     });
 }
 </script>
@@ -76,6 +80,14 @@ async function submit() {
                 <Field orientation="horizontal">
                     <Checkbox id="breaksEnabled" v-model:checked="form.breaks_enabled" />
                     <FieldLabel for="breaksEnabled">Allow tracking breaks</FieldLabel>
+                </Field>
+                <Field orientation="horizontal">
+                    <Checkbox
+                        id="requireTagWithProject"
+                        v-model:checked="form.require_tag_with_project" />
+                    <FieldLabel for="requireTagWithProject"
+                        >Require a tag when a project is selected</FieldLabel
+                    >
                 </Field>
             </div>
         </template>

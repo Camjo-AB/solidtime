@@ -394,6 +394,29 @@ class OrganizationEndpointTest extends ApiEndpointTestAbstract
         $response->assertJsonPath('data.breaks_enabled', false);
     }
 
+    public function test_update_endpoint_can_update_the_setting_require_tag_with_project(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'organizations:update',
+        ]);
+        $this->assertBillableRateServiceIsUnused();
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->putJson(route('api.v1.organizations.update', [$data->organization->getKey()]), [
+            'require_tag_with_project' => true,
+        ]);
+
+        // Assert
+        $response->assertStatus(200);
+        $response->assertJsonPath('data.require_tag_with_project', true);
+        $this->assertDatabaseHas(Organization::class, [
+            'id' => $data->organization->getKey(),
+            'require_tag_with_project' => true,
+        ]);
+    }
+
     public function test_update_endpoint_can_update_billable_rate_of_organization_and_update_time_entries(): void
     {
         // Arrange

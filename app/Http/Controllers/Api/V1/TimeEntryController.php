@@ -56,6 +56,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Maatwebsite\Excel\Facades\Excel;
 use Spatie\TemporaryDirectory\TemporaryDirectory;
 
@@ -96,6 +97,50 @@ class TimeEntryController extends Controller
         if ($query->exists()) {
             throw new OverlappingTimeEntryApiException;
         }
+    }
+
+    /**
+     * Whether a work entry with these values breaks the organization's "tag required with project" setting.
+     * Running entries are exempt, so the project and the tag can be picked one after the other while the timer runs.
+     *
+     * @param  array<string>|null  $tags
+     */
+    private function isMissingRequiredTag(Organization $organization, ?TimeEntryType $type, ?string $projectId, ?array $tags, bool $finished): bool
+    {
+        return $organization->require_tag_with_project
+            && $type !== TimeEntryType::Break
+            && $finished
+            && $projectId !== null
+            && count($tags ?? []) === 0;
+    }
+
+    /**
+     * @param  array<string>|null  $tags
+     *
+     * @throws ValidationException
+     */
+    private function assertTagForProject(Organization $organization, ?TimeEntryType $type, ?string $projectId, ?array $tags, bool $finished): void
+    {
+        if ($this->isMissingRequiredTag($organization, $type, $projectId, $tags, $finished)) {
+            throw ValidationException::withMessages([
+                'tags' => __('validation.tag_required_with_project'),
+            ]);
+        }
+    }
+
+    /**
+     * Whether the project or the tags of a time entry change, compared to the values it has now.
+     *
+     * @param  array<string>|null  $newTags
+     */
+    private function projectOrTagsChange(TimeEntry $timeEntry, ?string $newProjectId, ?array $newTags): bool
+    {
+        $oldTags = $timeEntry->tags ?? [];
+        $newTags = $newTags ?? [];
+        sort($oldTags);
+        sort($newTags);
+
+        return $newProjectId !== $timeEntry->project_id || $oldTags !== $newTags;
     }
 
     protected function checkPermission(Organization $organization, string $permission, ?TimeEntry $timeEntry = null): void
@@ -630,6 +675,14 @@ class TimeEntryController extends Controller
         $end = $request->input('end') !== null ? Carbon::parse($request->input('end')) : null;
         $this->assertNoOverlap($organization, $member, $start, $end);
 
+        $this->assertTagForProject(
+            $organization,
+            TimeEntryType::tryFrom((string) $request->input('type', TimeEntryType::Work->value)),
+            $request->input('project_id'),
+            $request->input('tags'),
+            $end !== null
+        );
+
         $project = $request->input('project_id') !== null ? Project::findOrFail((string) $request->input('project_id')) : null;
         $client = $project?->client;
         $task = $request->input('task_id') !== null ? $project->tasks()->findOrFail((string) $request->input('task_id')) : null;
@@ -681,6 +734,16 @@ class TimeEntryController extends Controller
         $effectiveStart = $request->has('start') ? Carbon::parse($request->input('start')) : $timeEntry->start;
         $effectiveEnd = $request->has('end') ? ($request->input('end') !== null ? Carbon::parse($request->input('end')) : null) : $timeEntry->end;
         $this->assertNoOverlap($organization, $effectiveMember, $effectiveStart, $effectiveEnd, $timeEntry);
+
+        // The tag requirement only applies when the project or tags change, or when a running entry is stopped,
+        // so older entries without a tag can still be edited otherwise
+        $effectiveProjectId = $request->has('project_id') ? $request->input('project_id') : $timeEntry->project_id;
+        $effectiveTags = $request->has('tags') ? $request->input('tags') : $timeEntry->tags;
+        $effectiveType = $request->has('type') ? TimeEntryType::tryFrom((string) $request->input('type')) : $timeEntry->type;
+        $isBeingStopped = $timeEntry->end === null && $effectiveEnd !== null;
+        if ($isBeingStopped || $this->projectOrTagsChange($timeEntry, $effectiveProjectId, $effectiveTags)) {
+            $this->assertTagForProject($organization, $effectiveType, $effectiveProjectId, $effectiveTags, $effectiveEnd !== null);
+        }
 
         $oldProject = $timeEntry->project;
         $oldTask = $timeEntry->task;
@@ -799,6 +862,15 @@ class TimeEntryController extends Controller
             }
             // Break entries can not be billable, have tags or belong to a project/task (see TimeEntry::booted)
             if ($resultingType === TimeEntryType::Break && ($project !== null || $task !== null || $request->boolean('changes.billable') || count($changes['tags'] ?? []) > 0)) {
+                $error->push($id);
+
+                continue;
+            }
+            // Finished entries that get a project without a tag, or lose their last tag, are rejected when the org requires a tag
+            $resultingProjectId = array_key_exists('project_id', $changes) ? $changes['project_id'] : $timeEntry->project_id;
+            $resultingTags = array_key_exists('tags', $changes) ? $changes['tags'] : $timeEntry->tags;
+            if ($this->projectOrTagsChange($timeEntry, $resultingProjectId, $resultingTags)
+                && $this->isMissingRequiredTag($organization, $resultingType, $resultingProjectId, $resultingTags, $timeEntry->end !== null)) {
                 $error->push($id);
 
                 continue;

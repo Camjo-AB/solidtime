@@ -11,6 +11,7 @@ import {
     type TimesheetRowKey,
 } from '@/utils/useTimesheetGrid';
 import { useNotificationsStore } from '@/utils/notification';
+import { getApiValidationMessage } from '@/utils/apiValidation';
 import {
     findFreeWindowOnDay,
     freeGapSecondsAfter,
@@ -167,10 +168,11 @@ export function useTimesheetCellMutations(
                 );
                 return;
             }
+            // Validation errors from the API (e.g. a required tag) explain what to fix
             notifications.addNotification(
                 'error',
                 'Failed to update timesheet',
-                'Please try again later.'
+                getApiValidationMessage(err, 'Please try again later.')
             );
         } finally {
             queryClient.invalidateQueries({ queryKey: ['timeEntries'] });
