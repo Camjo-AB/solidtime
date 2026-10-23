@@ -35,6 +35,8 @@ import {
     PlusIcon,
     StopIcon,
     XMarkIcon,
+    ClipboardDocumentIcon,
+    ClipboardIcon,
 } from '@heroicons/vue/20/solid';
 import { Coffee } from '@lucide/vue';
 import type { ActivityPeriod } from './activityTypes';
@@ -54,6 +56,7 @@ import { useEventDrag } from './useEventDrag';
 import { useEventResize } from './useEventResize';
 import { useSlotSelection } from './useSlotSelection';
 import { useContextMenu } from './useContextMenu';
+import type { CopiedTimeEntryFields } from './timeEntryClipboard';
 import type {
     TimeEntry,
     Project,
@@ -209,11 +212,11 @@ const { externalEventBoxesForDay } = useExternalEventBoxes({
 });
 
 // Clicking a calendar meeting opens "Create time entry" with its title and times
-const newEventDescription = ref<string | undefined>(undefined);
+const newEventInitialValues = ref<Partial<CopiedTimeEntryFields> | undefined>(undefined);
 function onExternalEventClick(box: ExternalEventBox) {
     newEventStart.value = getLocalizedDayJs(box.event.start);
     newEventEnd.value = getLocalizedDayJs(box.event.end);
-    newEventDescription.value = box.event.title;
+    newEventInitialValues.value = { description: box.event.title };
     showCreateTimeEntryModal.value = true;
 }
 
@@ -282,9 +285,12 @@ const {
 
 const {
     contextMenuTimeEntry,
+    copiedTimeEntry,
     handleCalendarContextMenu,
     handleContextEdit,
     handleContextDuplicate,
+    handleContextCopy,
+    handleContextPaste,
     handleContextDelete,
     handleContextSplit,
     handleContextStop,
@@ -304,9 +310,10 @@ const {
         selectedTimeEntry.value = entry;
         showEditTimeEntryModal.value = true;
     },
-    onCreateEvent: (start, end) => {
+    onCreateEvent: (start, end, prefill) => {
         newEventStart.value = start;
         newEventEnd.value = end;
+        newEventInitialValues.value = prefill;
         showCreateTimeEntryModal.value = true;
     },
     onCreateBreak: (start, end) => {
@@ -321,7 +328,7 @@ watch(showCreateTimeEntryModal, (value) => {
     if (!value) {
         newEventStart.value = null;
         newEventEnd.value = null;
-        newEventDescription.value = undefined;
+        newEventInitialValues.value = undefined;
         clearSelection();
         emit('refresh');
     }
@@ -515,7 +522,7 @@ function getEventDurationSeconds(dayEvent: DayEvent, dayStr: string): number {
             :clients="clients"
             :start="newEventStart ? newEventStart.toISOString() : undefined"
             :end="newEventEnd ? newEventEnd.toISOString() : undefined"
-            :initial-description="newEventDescription" />
+            :initial-values="newEventInitialValues" />
 
         <BreakCreateModal
             v-model:show="showCreateBreakModal"
@@ -771,6 +778,21 @@ function getEventDurationSeconds(dayEvent: DayEvent, dayStr: string): number {
                             <ScissorsIcon class="w-4 h-4 text-icon-default" />
                             <span>Split</span>
                         </ContextMenuItem>
+                        <!-- Copy/Paste carry description, project, task and tags; breaks have none -->
+                        <ContextMenuItem
+                            v-if="contextMenuTimeEntry.type !== 'break'"
+                            class="space-x-3"
+                            @select="handleContextCopy()">
+                            <ClipboardDocumentIcon class="w-4 h-4 text-icon-default" />
+                            <span>Copy</span>
+                        </ContextMenuItem>
+                        <ContextMenuItem
+                            v-if="copiedTimeEntry && contextMenuTimeEntry.type !== 'break'"
+                            class="space-x-3"
+                            @select="handleContextPaste()">
+                            <ClipboardIcon class="w-4 h-4 text-icon-default" />
+                            <span>Paste</span>
+                        </ContextMenuItem>
                         <ContextMenuSeparator />
                         <ContextMenuItem
                             class="space-x-3 text-destructive"
@@ -783,6 +805,13 @@ function getEventDurationSeconds(dayEvent: DayEvent, dayStr: string): number {
                         <ContextMenuItem class="space-x-3" @select="handleContextStop()">
                             <StopIcon class="w-4 h-4 text-icon-default" />
                             <span>Stop</span>
+                        </ContextMenuItem>
+                        <ContextMenuItem
+                            v-if="copiedTimeEntry && contextMenuTimeEntry.type !== 'break'"
+                            class="space-x-3"
+                            @select="handleContextPaste()">
+                            <ClipboardIcon class="w-4 h-4 text-icon-default" />
+                            <span>Paste</span>
                         </ContextMenuItem>
                         <ContextMenuSeparator />
                         <ContextMenuItem
@@ -803,6 +832,13 @@ function getEventDurationSeconds(dayEvent: DayEvent, dayStr: string): number {
                             @select="handleContextCreateBreak()">
                             <Coffee class="w-4 h-4 text-icon-default" />
                             <span>Add Break</span>
+                        </ContextMenuItem>
+                        <ContextMenuItem
+                            v-if="copiedTimeEntry"
+                            class="space-x-3"
+                            @select="handleContextPaste()">
+                            <ClipboardIcon class="w-4 h-4 text-icon-default" />
+                            <span>Paste</span>
                         </ContextMenuItem>
                     </template>
                 </ContextMenuContent>

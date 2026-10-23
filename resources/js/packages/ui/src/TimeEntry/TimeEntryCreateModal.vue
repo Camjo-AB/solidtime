@@ -27,6 +27,7 @@ import {
     useRequireTagWithProject,
 } from '@/packages/ui/src/utils/requireTagWithProject';
 import FieldError from '@/packages/ui/src/field/FieldError.vue';
+import type { CopiedTimeEntryFields } from '@/packages/ui/src/FullCalendar/timeEntryClipboard';
 
 const show = defineModel('show', { default: false });
 const saving = ref(false);
@@ -43,8 +44,8 @@ const props = defineProps<{
     clients: Client[];
     start?: string;
     end?: string;
-    /** Prefills the description, e.g. with the title of a calendar meeting. */
-    initialDescription?: string;
+    /** Prefills fields, e.g. the title of a calendar meeting or a copied time entry. */
+    initialValues?: Partial<CopiedTimeEntryFields>;
     currency: string;
     organizationBillableRate: number | null;
     canCreateProject: boolean;
@@ -62,9 +63,9 @@ watch(show, (value) => {
 
 const timeEntryDefaultValues = {
     description: '',
-    project_id: null,
-    task_id: null,
-    tags: [],
+    project_id: null as string | null,
+    task_id: null as string | null,
+    tags: [] as string[],
     billable: false,
     type: 'work' as CreateTimeEntryBody['type'],
     start: getDayJsInstance().utc().subtract(1, 'h').second(0).format(),
@@ -114,18 +115,29 @@ watch(localStart, (value) => {
     timeEntry.value.start = getLocalizedDayJs(value).utc().format();
 });
 
-// A prefilled description (e.g. a meeting title) must not stick around for the next, plain create.
-let descriptionWasPrefilled = false;
+// Prefilled fields (e.g. a meeting title) must not stick around for the next, plain create.
+let wasPrefilled = false;
 watch(
     show,
     (isShown) => {
         if (!isShown) return;
-        if (props.initialDescription !== undefined) {
-            timeEntry.value.description = props.initialDescription;
-            descriptionWasPrefilled = true;
-        } else if (descriptionWasPrefilled) {
-            timeEntry.value.description = '';
-            descriptionWasPrefilled = false;
+        if (wasPrefilled) {
+            timeEntry.value.description = timeEntryDefaultValues.description;
+            timeEntry.value.project_id = timeEntryDefaultValues.project_id;
+            timeEntry.value.task_id = timeEntryDefaultValues.task_id;
+            timeEntry.value.tags = [];
+            timeEntry.value.billable = timeEntryDefaultValues.billable;
+            wasPrefilled = false;
+        }
+        const initial = props.initialValues;
+        if (initial !== undefined) {
+            timeEntry.value = {
+                ...timeEntry.value,
+                ...initial,
+                description: initial.description ?? timeEntryDefaultValues.description,
+                tags: initial.tags ? [...initial.tags] : [],
+            };
+            wasPrefilled = true;
         }
     },
     { immediate: true }

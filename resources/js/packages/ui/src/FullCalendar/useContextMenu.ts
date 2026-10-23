@@ -5,6 +5,7 @@ import { getDayJsInstance, getLocalizedDayJs, getLocalizedDayJsFromMinutes } fro
 
 import type { CalendarSettings } from './calendarSettings';
 import type { CalendarEvent } from './calendarTypes';
+import { copiedTimeEntry, type CopiedTimeEntryFields } from './timeEntryClipboard';
 
 export function useContextMenu(params: {
     calendarSettings: Ref<CalendarSettings>;
@@ -18,7 +19,7 @@ export function useContextMenu(params: {
     updateTimeEntry: (entry: TimeEntry) => Promise<void>;
     deleteTimeEntry: (id: string) => Promise<void>;
     onEditEvent: (entry: TimeEntry) => void;
-    onCreateEvent: (start: Dayjs, end: Dayjs) => void;
+    onCreateEvent: (start: Dayjs, end: Dayjs, prefill?: CopiedTimeEntryFields) => void;
     onCreateBreak: (start: Dayjs, end: Dayjs) => void;
     emitRefresh: () => void;
 }) {
@@ -81,6 +82,36 @@ export function useContextMenu(params: {
             tags: entry.tags,
         });
         params.emitRefresh();
+    }
+
+    // Breaks have no project or tags, so there is nothing to copy from or paste onto them
+    function handleContextCopy() {
+        const entry = contextMenuTimeEntry.value;
+        if (!entry || entry.type === 'break') return;
+        copiedTimeEntry.value = {
+            description: entry.description,
+            project_id: entry.project_id,
+            task_id: entry.task_id,
+            tags: [...entry.tags],
+            billable: entry.billable,
+        };
+    }
+
+    // Pasting keeps the target's times; only description, project, task, tags and billable change
+    async function handleContextPaste() {
+        const copied = copiedTimeEntry.value;
+        if (!copied) return;
+        const entry = contextMenuTimeEntry.value;
+        if (entry) {
+            if (entry.type === 'break') return;
+            await params.updateTimeEntry({ ...entry, ...copied, tags: [...copied.tags] });
+            params.emitRefresh();
+            return;
+        }
+        if (!contextMenuCreateTime.value) return;
+        const gap = getGapAtClick(contextMenuCreateTime.value.start);
+        const range = gap ?? contextMenuCreateTime.value;
+        params.onCreateEvent(range.start, range.end, { ...copied, tags: [...copied.tags] });
     }
 
     async function handleContextDelete() {
@@ -157,19 +188,16 @@ export function useContextMenu(params: {
         }
     }
 
-    function handleContextCreateBreak() {
+    /**
+     * When a click lands in a gap between two entries of the same day,
+     * returns exactly that gap, otherwise null.
+     */
+    function getGapAtClick(clickTime: Dayjs): { start: Dayjs; end: Dayjs } | null {
         const dayjs = getDayJsInstance();
-        if (!contextMenuCreateTime.value) {
-            params.onCreateBreak(dayjs().utc().subtract(30, 'minute'), dayjs().utc());
-            return;
-        }
-        const clickTime = contextMenuCreateTime.value.start;
         // Day matching must use the user's configured timezone (the calendar renders
         // its day columns in that timezone), not the browser's local timezone
         const clickDate = getLocalizedDayJs(clickTime.format()).format('YYYY-MM-DD');
 
-        // When the click lands in a gap between two entries of the same day,
-        // the break is prefilled to exactly fill that gap
         let previousEnd: Dayjs | null = null;
         let nextStart: Dayjs | null = null;
         for (const calendarEvent of params.calendarEvents.value) {
@@ -192,18 +220,32 @@ export function useContextMenu(params: {
         }
 
         if (previousEnd !== null && nextStart !== null && previousEnd.isBefore(nextStart)) {
-            params.onCreateBreak(previousEnd, nextStart);
+            return { start: previousEnd, end: nextStart };
+        }
+        return null;
+    }
+
+    function handleContextCreateBreak() {
+        const dayjs = getDayJsInstance();
+        if (!contextMenuCreateTime.value) {
+            params.onCreateBreak(dayjs().utc().subtract(30, 'minute'), dayjs().utc());
             return;
         }
-        params.onCreateBreak(contextMenuCreateTime.value.start, contextMenuCreateTime.value.end);
+        // A click in a gap between two entries prefills the break to exactly fill that gap
+        const range =
+            getGapAtClick(contextMenuCreateTime.value.start) ?? contextMenuCreateTime.value;
+        params.onCreateBreak(range.start, range.end);
     }
 
     return {
         contextMenuTimeEntry,
         contextMenuCreateTime,
+        copiedTimeEntry,
         handleCalendarContextMenu,
         handleContextEdit,
         handleContextDuplicate,
+        handleContextCopy,
+        handleContextPaste,
         handleContextDelete,
         handleContextSplit,
         handleContextStop,
